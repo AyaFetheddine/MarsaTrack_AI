@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - 'backend/**'
+      - '.github/workflows/docker-build.yml'
+  workflow_dispatch:
 
 jobs:
   build-and-push:
