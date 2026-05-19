@@ -1,0 +1,73 @@
+# =============================================================================
+# MarsaTrack_AI — backend/.dockerignore
+# Exclut les fichiers inutiles ou sensibles du contexte de build Docker.
+# Un contexte allégé = image plus petite + build plus rapide + image sécurisée.
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# Dépendances Node.js locales
+# Docker exécutera `npm ci` (ou `npm install`) dans le conteneur pour garantir
+# une installation propre basée sur package-lock.json. Copier node_modules/
+# depuis le poste local polluerait l'image avec des binaires incompatibles
+# (ex : modules natifs compilés pour Windows au lieu de Linux).
+# -----------------------------------------------------------------------------
+node_modules/
+
+
+# -----------------------------------------------------------------------------
+# Fichiers de logs
+# Aucune valeur pour l'image de production — gardons l'image minimale.
+# -----------------------------------------------------------------------------
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
+
+
+# -----------------------------------------------------------------------------
+# Fichiers d'environnement & secrets
+# Les variables sensibles (DB_PASSWORD, JWT_SECRET, clés API…) ne doivent
+# JAMAIS être intégrées dans l'image. Elles sont injectées au runtime via
+# `docker run --env-file .env` ou les secrets de l'orchestrateur (Docker
+# Compose, Kubernetes Secrets, GitHub Actions secrets…).
+# -----------------------------------------------------------------------------
+.env
+.env.*
+
+
+# -----------------------------------------------------------------------------
+# Fichiers Docker eux-mêmes
+# Inutile d'embarquer ces fichiers de configuration dans l'image finale.
+# -----------------------------------------------------------------------------
+Dockerfile
+.dockerignore
+
+
+# -----------------------------------------------------------------------------
+# Uploads locaux (fichiers statiques de test)
+# Ce dossier contient les photos de conteneurs uploadées en développement.
+# Il ne doit pas alourdir l'image — en production, un volume Docker ou un
+# service de stockage externe (ex : AWS S3, MinIO) prendra le relais.
+# -----------------------------------------------------------------------------
+uploads/
+
+
+# -----------------------------------------------------------------------------
+# Divers
+# -----------------------------------------------------------------------------
+# Tests & couverture de code (pas nécessaires en image de production)
+coverage/
+*.test.js
+*.spec.js
+
+# Fichiers d'éditeur et OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Git (historique inutile dans l'image)
+.git/
+.gitignore
