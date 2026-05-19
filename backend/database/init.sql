@@ -1,0 +1,174 @@
+-- ============================================================
+-- MarsaTrack AI — Initialisation de la base de données
+-- Base : marsatrack_db | Moteur : InnoDB | Encodage : utf8mb4
+-- Cahier des charges : Système Intelligent de Gestion et
+-- d'Assistance Portuaire — Marsa Maroc (Port de Casablanca)
+-- ============================================================
+--
+-- ┌─────────────────────────────────────────────────────────┐
+-- │         MODÉLISATION TEMPORELLE STRICTE (24/7)          │
+-- ├──────────────┬────────────────────────────────────────── ┤
+-- │ Shift 1      │ 07:00 → 15:00                            │
+-- │  Vacation 1  │ 07h00 → 11h00                            │
+-- │  Vacation 2  │ 11h00 → 15h00                            │
+-- ├──────────────┼──────────────────────────────────────────┤
+-- │ Shift 2      │ 15:00 → 23:00                            │
+-- │  Vacation 1  │ 15h00 → 19h00                            │
+-- │  Vacation 2  │ 19h00 → 23h00                            │
+-- ├──────────────┼──────────────────────────────────────────┤
+-- │ Shift 3      │ 23:00 → 07:00                            │
+-- │  Vacation 1  │ 23h00 → 03h00                            │
+-- │  Vacation 2  │ 03h00 → 07h00                            │
+-- └──────────────┴──────────────────────────────────────────┘
+--
+-- Rôle des Vacations : rotation obligatoire des Portiqueurs
+-- toutes les 4 heures sur leur engin (grue RTG/STS).
+-- ============================================================
+
+CREATE DATABASE IF NOT EXISTS marsatrack_db
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+USE marsatrack_db;
+
+
+-- ============================================================
+-- Table : users
+-- Centralise tous les acteurs opérationnels du terminal.
+-- Hiérarchie : Chef d'escale > Chef d'équipe > Portiqueur
+-- Équipage élargi : Planner, conducteur, pointeur
+-- Le matricule est l'identifiant métier unique (badge Marsa Maroc).
+-- ============================================================
+CREATE TABLE IF NOT EXISTS users (
+  id            INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  nom_complet   VARCHAR(150)  NOT NULL,
+  matricule     VARCHAR(50)   NOT NULL UNIQUE
+                              COMMENT 'Identifiant badge unique employé Marsa Maroc',
+  role          ENUM(
+                  'Chef d''escale',
+                  'Chef d''équipe',
+                  'Portiqueur',
+                  'Planner',
+                  'conducteur',
+                  'pointeur'
+                )             NOT NULL,
+  password_hash VARCHAR(255)  NOT NULL
+                              COMMENT 'Hash bcrypt — mot de passe jamais stocké en clair',
+  created_at    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Acteurs opérationnels du terminal portuaire';
+
+
+-- ============================================================
+-- Table : operations
+-- Une opération ("Main") représente l'unité de travail fondamentale.
+-- Elle est ancrée dans le temps via un Shift ET une Vacation,
+-- ce qui permet de retracer précisément la fenêtre de 4h concernée.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS operations (
+  id             INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  nom_operation  VARCHAR(200)  NOT NULL
+                               COMMENT 'Ex : Déchargement MSC ANNA — Quai 5',
+  date_operation DATE          NOT NULL,
+  shift          ENUM(
+                   'Shift 1',
+                   'Shift 2',
+                   'Shift 3'
+                 )             NOT NULL
+                               COMMENT 'Shift 1=07-15h | Shift 2=15-23h | Shift 3=23-07h',
+  vacation       ENUM(
+                   'Vacation 1',
+                   'Vacation 2'
+                 )             NOT NULL
+                               COMMENT 'Vacation 1=première moitié du shift | Vacation 2=deuxième moitié',
+  PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Unité de travail portuaire, ancrée dans un shift et une vacation';
+
+
+-- ============================================================
+-- Table : arrets_travail
+-- Enregistre en temps réel les arrêts de travail survenus
+-- durant une opération, avec horodatage précis début/fin.
+-- Source de vérité consultée par MarsaBot Factory via l'API.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS arrets_travail (
+  id           INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  operation_id INT UNSIGNED  NOT NULL,
+  cause        ENUM(
+                 'panne grue',
+                 'manque de matériel',
+                 'attente camion'
+               )             NOT NULL
+               COMMENT 'Qualification précise de la cause de l''arrêt',
+  heure_debut  DATETIME      NOT NULL COMMENT 'Horodatage de début de l''arrêt',
+  heure_fin    DATETIME      NULL     COMMENT 'NULL si l''arrêt est toujours en cours',
+  PRIMARY KEY (id),
+  CONSTRAINT fk_arret_operation
+    FOREIGN KEY (operation_id) REFERENCES operations (id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Arrêts de travail horodatés — consultés par le chatbot WhatsApp';
+
+
+-- ============================================================
+-- Table : container
+-- Stocke les résultats de la détection IA (YOLOv11 + OCR).
+-- Le matricule_iso doit respecter la norme ISO 6346 :
+--   → 4 lettres (code propriétaire + catégorie) + 7 chiffres
+--   → Validation applicative obligatoire avant insertion.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS container (
+  id                INT UNSIGNED   NOT NULL AUTO_INCREMENT,
+  operation_id      INT UNSIGNED   NOT NULL,
+  matricule_iso     VARCHAR(20)    NOT NULL
+                    COMMENT 'Norme ISO 6346 : 4 lettres + 7 chiffres (ex: MSCU1234567). Validation regex côté API.',
+  image_url         VARCHAR(500)   NOT NULL
+                    COMMENT 'Chemin relatif ou URL S3 de la photo source',
+  ai_confidence     FLOAT          NULL
+                    COMMENT 'Score de confiance YOLOv11 (0.0 à 1.0)',
+  PRIMARY KEY (id),
+  CONSTRAINT fk_container_operation
+    FOREIGN KEY (operation_id) REFERENCES operations (id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Conteneurs détectés par IA — matricules validés ISO 6346';
+
+
+-- ============================================================
+-- Table : sessions_whatsapp
+-- Trace les sessions de conversation du chatbot MarsaBot Factory
+-- liées à une opération spécifique. Permet la contextualisation
+-- des réponses LLM en croisant avec les données terrain.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS sessions_whatsapp (
+  id               INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  operation_id     INT UNSIGNED  NOT NULL,
+  phone_number     VARCHAR(20)   NOT NULL
+                   COMMENT 'Numéro E.164 (ex: +212600000000)',
+  last_interaction DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP
+                   ON UPDATE CURRENT_TIMESTAMP
+                   COMMENT 'Mis à jour à chaque message entrant/sortant',
+  PRIMARY KEY (id),
+  CONSTRAINT fk_session_operation
+    FOREIGN KEY (operation_id) REFERENCES operations (id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Sessions WhatsApp contextualisées par opération portuaire';
+
+
+-- ============================================================
+-- Données initiales : utilisateur administrateur de test
+-- ⚠️  IMPORTANT : remplacer ce hash avant tout déploiement.
+--    Hash bcrypt généré pour le mot de passe : ***REDACTED-TEST-PASSWORD***
+--    Commande : node -e "const b=require('bcryptjs');
+--               b.hash('***REDACTED-TEST-PASSWORD***',12).then(console.log)"
+-- ============================================================
+INSERT IGNORE INTO users (nom_complet, matricule, role, password_hash)
+VALUES (
+  'Administrateur Système',
+  'ADM-001',
+  'Chef d''escale',
+  '***REDACTED-OLD-HASH***'
+);
