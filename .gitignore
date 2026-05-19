@@ -1,0 +1,86 @@
+# =============================================================================
+# MarsaTrack_AI — .gitignore
+# Full-Stack Node.js + React
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# Fichiers d'environnement & secrets
+# Ne jamais versionner les clés API, mots de passe, tokens, certificats
+# -----------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+
+# -----------------------------------------------------------------------------
+# Dépendances Node.js
+# Installées via `npm install` ou `yarn install`, inutile de les versionner
+# -----------------------------------------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+# NE PAS ignorer package-lock.json — il garantit des builds reproductibles
+# en CI/CD (GitHub Actions, Docker) et évite le "ça marche sur ma machine"
+# Décommenter la ligne suivante si tu utilises Yarn à la place de npm
+# yarn.lock
+
+
+# -----------------------------------------------------------------------------
+# Builds du frontend (React / Vite)
+# Générés via `npm run build`, ne font pas partie du code source
+# -----------------------------------------------------------------------------
+/frontend/dist/
+/frontend/build/
+/frontend/.cache/
+
+
+# -----------------------------------------------------------------------------
+# Uploads locaux (backend)
+# Contient les photos de conteneurs uploadées pendant les tests — ne jamais
+# pousser des fichiers binaires/images sur GitHub
+# -----------------------------------------------------------------------------
+/backend/uploads/
+
+
+# -----------------------------------------------------------------------------
+# Logs applicatifs
+# -----------------------------------------------------------------------------
+logs/
+*.log
+
+
+# -----------------------------------------------------------------------------
+# Fichiers système OS
+# Créés automatiquement par Windows / macOS — sans valeur pour le projet
+# -----------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+
+
+# -----------------------------------------------------------------------------
+# Éditeurs de code & IDEs
+# Préférences locales qui varient d'un développeur à l'autre
+# -----------------------------------------------------------------------------
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+
+# -----------------------------------------------------------------------------
+# Divers
+# -----------------------------------------------------------------------------
+# Dossier de couverture de tests
+coverage/
+
+# Fichiers temporaires
+*.tmp
+*.temp
