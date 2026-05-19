@@ -1,4 +1,4 @@
-git add .name: CI/CD Backend to Docker Hub
+name: CI/CD Backend to Docker Hub
 
 on:
   push:
