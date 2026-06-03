@@ -10,6 +10,7 @@ const { testConnection } = require('./config/db');
 // ─── Import des routes ────────────────────────────────────────────────────────
 const authRoutes      = require('./routes/authRoutes');
 const operationRoutes = require('./routes/operationRoutes');
+const arretRoutes     = require('./routes/arretRoutes');
 
 // ─── Initialisation de l'application Express ────────────────────────────────
 const app = express();
@@ -30,6 +31,9 @@ app.use('/api/auth', authRoutes);
 
 // Module de gestion des opérations portuaires
 app.use('/api/operations', operationRoutes);
+
+// Module de gestion des arrêts de travail (incidents terrain)
+app.use('/api/arrets', arretRoutes);
 
 /**
  * Health Check — GET /api/health
