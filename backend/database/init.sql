@@ -172,3 +172,12 @@ VALUES (
   'Chef_Escale',
   '***REDACTED-OLD-HASH***'
 );
+
+-- Utilisateur de test avec droits de création d'opérations (mot de passe : ***REDACTED-TEST-PASSWORD***)
+INSERT IGNORE INTO users (nom_complet, matricule, role, password_hash)
+VALUES (
+  'Chef Equipe Test',
+  'CE-001',
+  'Chef_Equipe',
+  '***REDACTED-OLD-HASH***'
+);
