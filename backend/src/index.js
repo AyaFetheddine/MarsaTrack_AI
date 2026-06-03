@@ -7,6 +7,9 @@ const cors    = require('cors');
 
 const { testConnection } = require('./config/db');
 
+// ─── Import des routes ────────────────────────────────────────────────────────
+const authRoutes = require('./routes/authRoutes');
+
 // ─── Initialisation de l'application Express ────────────────────────────────
 const app = express();
 
@@ -20,6 +23,9 @@ app.use(express.json());
 
 
 // ─── Routes ──────────────────────────────────────────────────────────────────
+
+// Module d'authentification (login, JWT)
+app.use('/api/auth', authRoutes);
 
 /**
  * Health Check — GET /api/health

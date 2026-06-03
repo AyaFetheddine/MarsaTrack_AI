@@ -45,12 +45,12 @@ CREATE TABLE IF NOT EXISTS users (
   matricule     VARCHAR(50)   NOT NULL UNIQUE
                               COMMENT 'Identifiant badge unique employé Marsa Maroc',
   role          ENUM(
-                  'Chef d''escale',
-                  'Chef d''équipe',
-                  'Portiqueur',
-                  'Planner',
-                  'conducteur',
-                  'pointeur'
+                  'Responsable_Exploitation', -- Planificateur, définit les besoins et affecte les portiques
+                  'Chef_Services',            -- Validateur final, clôture et verrouille l'opération
+                  'Chef_Escale',              -- Superviseur global de plusieurs opérations simultanées
+                  'Chef_Equipe',              -- Gestionnaire terrain, crée et saisit les données d'opération
+                  'Portiqueur',               -- Opérateur grue (1 par opération, rotation toutes les 4h)
+                  'Equipage'                  -- Personnel élargi : conducteurs, pointeurs
                 )             NOT NULL,
   password_hash VARCHAR(255)  NOT NULL
                               COMMENT 'Hash bcrypt — mot de passe jamais stocké en clair',
@@ -169,6 +169,6 @@ INSERT IGNORE INTO users (nom_complet, matricule, role, password_hash)
 VALUES (
   'Administrateur Système',
   'ADM-001',
-  'Chef d''escale',
+  'Chef_Escale',
   '***REDACTED-OLD-HASH***'
 );
