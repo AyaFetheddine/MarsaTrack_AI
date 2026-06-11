@@ -181,3 +181,12 @@ VALUES (
   'Chef_Equipe',
   '***REDACTED-OLD-HASH***'
 );
+
+-- Utilisateur de test avec droits de saisie des conteneurs (mot de passe : ***REDACTED-TEST-PASSWORD***)
+INSERT IGNORE INTO users (nom_complet, matricule, role, password_hash)
+VALUES (
+  'Portiqueur Test',
+  'PQ-001',
+  'Portiqueur',
+  '***REDACTED-OLD-HASH***'
+);

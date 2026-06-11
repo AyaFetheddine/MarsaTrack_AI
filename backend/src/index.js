@@ -11,6 +11,7 @@ const { testConnection } = require('./config/db');
 const authRoutes      = require('./routes/authRoutes');
 const operationRoutes = require('./routes/operationRoutes');
 const arretRoutes     = require('./routes/arretRoutes');
+const containerRoutes = require('./routes/containerRoutes');
 
 // ─── Initialisation de l'application Express ────────────────────────────────
 const app = express();
@@ -34,6 +35,9 @@ app.use('/api/operations', operationRoutes);
 
 // Module de gestion des arrêts de travail (incidents terrain)
 app.use('/api/arrets', arretRoutes);
+
+// Module de gestion des conteneurs saisis par les portiqueurs
+app.use('/api/containers', containerRoutes);
 
 /**
  * Health Check — GET /api/health
