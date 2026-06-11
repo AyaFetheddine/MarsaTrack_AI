@@ -92,6 +92,25 @@ CREATE TABLE IF NOT EXISTS operations (
 
 
 -- ============================================================
+-- Table : operation_equipe
+-- Associe les membres du personnel terrain à une opération.
+-- Une même personne ne peut être affectée qu'une fois à la même opération.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS operation_equipe (
+  operation_id INT UNSIGNED NOT NULL,
+  user_id      INT UNSIGNED NOT NULL,
+  PRIMARY KEY (operation_id, user_id),
+  CONSTRAINT fk_operation_equipe_operation
+    FOREIGN KEY (operation_id) REFERENCES operations (id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_operation_equipe_user
+    FOREIGN KEY (user_id) REFERENCES users (id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Affectation du personnel terrain aux opérations portuaires';
+
+
+-- ============================================================
 -- Table : arrets_travail
 -- Enregistre en temps réel les arrêts de travail survenus
 -- durant une opération, avec horodatage précis début/fin.
