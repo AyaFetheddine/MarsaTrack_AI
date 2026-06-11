@@ -82,6 +82,10 @@ CREATE TABLE IF NOT EXISTS operations (
                    'Vacation 2'
                  )             NOT NULL
                                COMMENT 'Vacation 1=première moitié du shift | Vacation 2=deuxième moitié',
+  statut         ENUM(
+                   'en cours',
+                   'cloturee'
+                 )             NOT NULL DEFAULT 'en cours',
   PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Unité de travail portuaire, ancrée dans un shift et une vacation';
@@ -188,5 +192,14 @@ VALUES (
   'Portiqueur Test',
   'PQ-001',
   'Portiqueur',
+  '***REDACTED-OLD-HASH***'
+);
+
+-- Utilisateur de test avec droits de cloture des operations (mot de passe : ***REDACTED-TEST-PASSWORD***)
+INSERT IGNORE INTO users (nom_complet, matricule, role, password_hash)
+VALUES (
+  'Chef Services Test',
+  'CS-001',
+  'Chef_Services',
   '***REDACTED-OLD-HASH***'
 );

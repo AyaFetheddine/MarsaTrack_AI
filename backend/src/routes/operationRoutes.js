@@ -1,6 +1,6 @@
 const express = require('express');
 
-const { createOperation, getOperations } = require('../controllers/operationController');
+const { createOperation, getOperations, cloturerOperation } = require('../controllers/operationController');
 const { authenticateToken, authorizeRoles } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
@@ -26,6 +26,18 @@ router.get(
   '/',
   authenticateToken,
   getOperations
+);
+
+/**
+ * PUT /api/operations/:id/cloturer
+ * Cloture une operation portuaire.
+ * Reserve au role : Chef_Services.
+ */
+router.put(
+  '/:id/cloturer',
+  authenticateToken,
+  authorizeRoles('Chef_Services'),
+  cloturerOperation
 );
 
 module.exports = router;

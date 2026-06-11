@@ -60,6 +60,7 @@ const createOperation = async (req, res) => {
         date_operation,
         shift,
         vacation,
+        statut: 'en cours',
       },
     });
   } catch (error) {
@@ -81,7 +82,7 @@ const createOperation = async (req, res) => {
 const getOperations = async (req, res) => {
   try {
     const [rows] = await pool.execute(
-      `SELECT id, nom_operation, date_operation, shift, vacation
+      `SELECT id, nom_operation, date_operation, shift, vacation, statut
        FROM operations
        ORDER BY date_operation DESC, id DESC`
     );
@@ -100,4 +101,51 @@ const getOperations = async (req, res) => {
   }
 };
 
-module.exports = { createOperation, getOperations };
+/**
+ * Controleur : cloturerOperation
+ * Route : PUT /api/operations/:id/cloturer
+ *
+ * Cloture une operation portuaire en passant son statut a "cloturee".
+ * Reserve au role Chef_Services.
+ */
+const cloturerOperation = async (req, res) => {
+  const { id } = req.params;
+
+  if (!id || isNaN(Number(id))) {
+    return res.status(400).json({
+      status  : 'error',
+      message : 'L\'identifiant de l\'operation doit etre un nombre entier valide.',
+    });
+  }
+
+  try {
+    const [result] = await pool.execute(
+      'UPDATE operations SET statut = ? WHERE id = ?',
+      ['cloturee', id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        status  : 'error',
+        message : `Operation introuvable (id: ${id}).`,
+      });
+    }
+
+    return res.status(200).json({
+      status  : 'success',
+      message : 'Operation cloturee avec succes.',
+      data    : {
+        id     : Number(id),
+        statut : 'cloturee',
+      },
+    });
+  } catch (error) {
+    console.error('[operationController] Erreur cloturerOperation :', error.message);
+    return res.status(500).json({
+      status  : 'error',
+      message : 'Erreur interne du serveur lors de la cloture de l\'operation.',
+    });
+  }
+};
+
+module.exports = { createOperation, getOperations, cloturerOperation };
