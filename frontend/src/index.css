@@ -16,7 +16,8 @@
   }
 
   button,
-  input {
+  input,
+  select {
     font: inherit;
   }
 
@@ -39,7 +40,39 @@
     @apply h-11 w-full rounded-md border border-[#c8d8e8] bg-[#f8fbff] pl-11 pr-3 text-[15px] text-[#0d253f] outline-none transition placeholder:text-[#9ab0c8] focus:border-marsa-ciel focus:bg-white focus:ring-4 focus:ring-marsa-ciel/15;
   }
 
+  .form-control {
+    @apply h-11 w-full rounded-md border border-[#c8d8e8] bg-[#f8fbff] px-3 text-[15px] text-[#0d253f] outline-none transition placeholder:text-[#9ab0c8] focus:border-marsa-ciel focus:bg-white focus:ring-4 focus:ring-marsa-ciel/15;
+  }
+
+  .primary-button {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-marsa-royal px-4 text-sm font-bold text-white transition hover:-translate-y-px hover:bg-marsa-ciel hover:shadow-[0_4px_14px_rgba(0,153,204,0.28)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0;
+  }
+
   .page-card {
     @apply rounded-lg border border-marsa-border bg-white p-5 shadow-card sm:p-6;
+  }
+
+  .data-table {
+    @apply w-full min-w-[680px] border-collapse text-left text-sm;
+  }
+
+  .data-table thead {
+    @apply bg-[#f5f9fd] text-xs uppercase text-[#5b7a99];
+  }
+
+  .data-table th {
+    @apply border-b border-marsa-border px-4 py-3 font-bold;
+  }
+
+  .data-table td {
+    @apply border-b border-[#eaf1f7] px-4 py-3.5 text-[#345270];
+  }
+
+  .data-table tbody tr:last-child td {
+    @apply border-b-0;
+  }
+
+  .data-table tbody tr {
+    @apply transition hover:bg-[#f8fbff];
   }
 }

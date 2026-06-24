@@ -40,4 +40,9 @@ export const usersApi = {
   personnel: () => api.get('/users/personnel'),
 }
 
+export const getApiErrorMessage = (
+  error,
+  fallback = 'Une erreur est survenue. Veuillez reessayer.',
+) => error.response?.data?.message || fallback
+
 export default api

@@ -1,34 +1,98 @@
-import { Boxes, ClipboardList, HardHat, OctagonAlert } from 'lucide-react'
+import {
+  Boxes,
+  CircleCheck,
+  ClipboardList,
+  HardHat,
+  OctagonAlert,
+  Timer,
+} from 'lucide-react'
+import { useEffect, useState } from 'react'
+import {
+  getApiErrorMessage,
+  operationsApi,
+  usersApi,
+} from '../api/api'
+import FeedbackMessage from '../components/FeedbackMessage'
+import Loader from '../components/Loader'
 import StatCard from '../components/StatCard'
 
-const stats = [
-  {
-    title: 'Operations actives',
-    value: '08',
-    icon: ClipboardList,
-    accentClass: 'bg-[#e8f1fb] text-marsa-royal',
-  },
-  {
-    title: 'Arrets en cours',
-    value: '02',
-    icon: OctagonAlert,
-    accentClass: 'bg-[#fff1e8] text-[#c45a12]',
-  },
-  {
-    title: 'Conteneurs saisis',
-    value: '146',
-    icon: Boxes,
-    accentClass: 'bg-[#e5f7fb] text-marsa-ciel',
-  },
-  {
-    title: 'Personnel disponible',
-    value: '24',
-    icon: HardHat,
-    accentClass: 'bg-[#e7f7ef] text-[#148354]',
-  },
-]
-
 function Dashboard() {
+  const [operations, setOperations] = useState([])
+  const [personnelCount, setPersonnelCount] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const loadDashboard = async () => {
+      try {
+        const [operationsResponse, personnelResponse] = await Promise.all([
+          operationsApi.list(),
+          usersApi.personnel(),
+        ])
+
+        setOperations(operationsResponse.data.data || [])
+        setPersonnelCount((personnelResponse.data.data || []).length)
+      } catch (requestError) {
+        setError(
+          getApiErrorMessage(
+            requestError,
+            'Impossible de charger les indicateurs du dashboard.',
+          ),
+        )
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadDashboard()
+  }, [])
+
+  const activeCount = operations.filter(
+    (operation) => operation.statut === 'en cours',
+  ).length
+  const closedCount = operations.filter(
+    (operation) => operation.statut === 'cloturee',
+  ).length
+
+  const stats = [
+    {
+      title: 'Total operations',
+      value: operations.length,
+      icon: ClipboardList,
+      accentClass: 'bg-[#e8f1fb] text-marsa-royal',
+    },
+    {
+      title: 'Operations en cours',
+      value: activeCount,
+      icon: Timer,
+      accentClass: 'bg-[#e5f7fb] text-marsa-ciel',
+    },
+    {
+      title: 'Operations cloturees',
+      value: closedCount,
+      icon: CircleCheck,
+      accentClass: 'bg-[#e7f7ef] text-[#148354]',
+    },
+    {
+      title: 'Arrets en cours',
+      value: '--',
+      icon: OctagonAlert,
+      accentClass: 'bg-[#fff1e8] text-[#c45a12]',
+    },
+    {
+      title: 'Conteneurs saisis',
+      value: '--',
+      icon: Boxes,
+      accentClass: 'bg-[#eef2f6] text-[#4a6582]',
+    },
+    {
+      title: 'Personnel disponible',
+      value: personnelCount,
+      icon: HardHat,
+      accentClass: 'bg-[#e7f7ef] text-[#148354]',
+    },
+  ]
+
   return (
     <div className="space-y-6">
       <header>
@@ -40,19 +104,37 @@ function Dashboard() {
         </p>
       </header>
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((stat) => (
-          <StatCard key={stat.title} {...stat} />
-        ))}
-      </section>
+      {error && <FeedbackMessage>{error}</FeedbackMessage>}
 
-      <section className="page-card min-h-64">
+      {loading ? (
+        <section className="page-card">
+          <Loader label="Chargement des indicateurs..." />
+        </section>
+      ) : (
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {stats.map((stat) => (
+            <StatCard key={stat.title} {...stat} />
+          ))}
+        </section>
+      )}
+
+      <section className="page-card min-h-52">
         <h3 className="text-base font-bold text-marsa-royal">
-          Activite recente
+          Disponibilite des donnees
         </h3>
         <p className="mt-1 text-sm text-marsa-muted">
-          Les donnees operationnelles seront affichees ici.
+          Les operations et le personnel sont synchronises avec le backend.
         </p>
+        <div className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
+          <div className="rounded-md border border-[#dce8f4] bg-[#f8fbff] p-4 text-[#345270]">
+            L'indicateur des arrets restera indisponible jusqu'a l'ajout d'un
+            endpoint GET dedie.
+          </div>
+          <div className="rounded-md border border-[#dce8f4] bg-[#f8fbff] p-4 text-[#345270]">
+            L'indicateur des conteneurs restera indisponible jusqu'a l'ajout
+            d'un endpoint GET dedie.
+          </div>
+        </div>
       </section>
     </div>
   )
