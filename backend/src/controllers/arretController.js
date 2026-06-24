@@ -19,6 +19,7 @@ const CAUSES_VALIDES = ['panne grue', 'manque de matériel', 'attente camion'];
  */
 const declarerArret = async (req, res) => {
   const { operation_id, cause } = req.body;
+  const declaredBy = req.user.id;
 
   // Validation des champs obligatoires
   if (!operation_id || !cause) {
@@ -54,9 +55,9 @@ const declarerArret = async (req, res) => {
     }
 
     const [result] = await pool.execute(
-      `INSERT INTO arrets_travail (operation_id, cause, heure_debut)
-       VALUES (?, ?, ?)`,
-      [operation_id, cause, heure_debut]
+      `INSERT INTO arrets_travail (operation_id, cause, heure_debut, declared_by)
+       VALUES (?, ?, ?, ?)`,
+      [operation_id, cause, heure_debut, declaredBy]
     );
 
     return res.status(201).json({
@@ -68,6 +69,8 @@ const declarerArret = async (req, res) => {
         cause,
         heure_debut  : heure_debut.toISOString(),
         heure_fin    : null,
+        statut       : 'en cours',
+        declared_by  : declaredBy,
       },
     });
   } catch (error) {
@@ -146,8 +149,8 @@ const cloturerArret = async (req, res) => {
  * Controleur : getArrets
  * Route : GET /api/arrets
  *
- * Retourne l'historique des arrets avec leur operation et leur statut calcule.
- * Le schema actuel ne stocke pas encore l'utilisateur declarant.
+ * Retourne l'historique des arrets avec leur operation, leur statut et
+ * l'utilisateur ayant effectue la declaration.
  */
 const getArrets = async (req, res) => {
   try {
@@ -166,9 +169,13 @@ const getArrets = async (req, res) => {
          o.date_operation,
          o.shift,
          o.vacation,
-         NULL AS declarant
+         u.id AS declarant_id,
+         u.nom_complet AS declarant_nom_complet,
+         u.matricule AS declarant_matricule,
+         u.role AS declarant_role
        FROM arrets_travail a
        INNER JOIN operations o ON o.id = a.operation_id
+       LEFT JOIN users u ON u.id = a.declared_by
        ORDER BY a.heure_debut DESC, a.id DESC`
     );
 

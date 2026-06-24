@@ -279,7 +279,11 @@ function Containers() {
                         ? 'Saisie manuelle'
                         : `${Math.round(container.ai_confidence * 100)} %`}
                     </td>
-                    <td>{container.portiqueur || 'Non renseigne'}</td>
+                    <td>
+                      {container.auteur_nom_complet ||
+                        container.auteur_matricule ||
+                        'Non renseigne'}
+                    </td>
                     <td>{formatDateTime(container.created_at)}</td>
                   </tr>
                 ))}

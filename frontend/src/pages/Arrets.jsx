@@ -232,7 +232,7 @@ function Arrets() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="data-table min-w-[960px]">
+            <table className="data-table min-w-[1080px]">
               <thead>
                 <tr>
                   <th>Operation</th>
@@ -240,6 +240,7 @@ function Arrets() {
                   <th>Debut</th>
                   <th>Fin</th>
                   <th>Statut</th>
+                  <th>Declare par</th>
                   <th>Action</th>
                 </tr>
               </thead>
@@ -254,6 +255,11 @@ function Arrets() {
                     <td>{formatDateTime(arret.heure_fin)}</td>
                     <td>
                       <StatusBadge value={arret.statut} />
+                    </td>
+                    <td>
+                      {arret.declarant_nom_complet ||
+                        arret.declarant_matricule ||
+                        'Non renseigne'}
                     </td>
                     <td>
                       {arret.statut === 'en cours' ? (

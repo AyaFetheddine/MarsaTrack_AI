@@ -127,10 +127,15 @@ CREATE TABLE IF NOT EXISTS arrets_travail (
                COMMENT 'Qualification précise de la cause de l''arrêt',
   heure_debut  DATETIME      NOT NULL COMMENT 'Horodatage de début de l''arrêt',
   heure_fin    DATETIME      NULL     COMMENT 'NULL si l''arrêt est toujours en cours',
+  declared_by  INT UNSIGNED  NULL
+                              COMMENT 'Utilisateur authentifié ayant déclaré l''arrêt',
   PRIMARY KEY (id),
   CONSTRAINT fk_arret_operation
     FOREIGN KEY (operation_id) REFERENCES operations (id)
-    ON DELETE CASCADE ON UPDATE CASCADE
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_arret_declared_by
+    FOREIGN KEY (declared_by) REFERENCES users (id)
+    ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Arrêts de travail horodatés — consultés par le chatbot WhatsApp';
 
@@ -151,10 +156,16 @@ CREATE TABLE IF NOT EXISTS container (
                     COMMENT 'Chemin relatif ou URL S3 de la photo source',
   ai_confidence     FLOAT          NULL
                     COMMENT 'Score de confiance YOLOv11 (0.0 à 1.0)',
+  created_by        INT UNSIGNED   NULL
+                    COMMENT 'Utilisateur authentifié ayant saisi le conteneur',
+  created_at        TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   CONSTRAINT fk_container_operation
     FOREIGN KEY (operation_id) REFERENCES operations (id)
-    ON DELETE CASCADE ON UPDATE CASCADE
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_container_created_by
+    FOREIGN KEY (created_by) REFERENCES users (id)
+    ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Conteneurs détectés par IA — matricules validés ISO 6346';
 

@@ -13,6 +13,7 @@ const ISO_6346_REGEX = /^[A-Z]{4}\d{7}$/;
 const saisirContainer = async (req, res) => {
   const { operation_id, matricule_iso, image_url } = req.body;
   const ai_confidence = null;
+  const createdBy = req.user.id;
 
   // Validation des champs obligatoires
   if (!operation_id || !matricule_iso || !image_url) {
@@ -52,9 +53,20 @@ const saisirContainer = async (req, res) => {
     }
 
     const [result] = await pool.execute(
-      `INSERT INTO container (operation_id, matricule_iso, image_url, ai_confidence)
-       VALUES (?, ?, ?, ?)`,
-      [operation_id, matricule_iso, image_url, ai_confidence]
+      `INSERT INTO container (
+         operation_id,
+         matricule_iso,
+         image_url,
+         ai_confidence,
+         created_by
+       )
+       VALUES (?, ?, ?, ?, ?)`,
+      [operation_id, matricule_iso, image_url, ai_confidence, createdBy]
+    );
+
+    const [createdRows] = await pool.execute(
+      'SELECT created_at FROM container WHERE id = ?',
+      [result.insertId]
     );
 
     return res.status(201).json({
@@ -66,6 +78,8 @@ const saisirContainer = async (req, res) => {
         matricule_iso,
         image_url,
         ai_confidence,
+        created_by    : createdBy,
+        created_at    : createdRows[0].created_at,
       },
     });
   } catch (error) {
@@ -81,9 +95,8 @@ const saisirContainer = async (req, res) => {
  * Controleur : getContainers
  * Route : GET /api/containers
  *
- * Retourne l'historique des conteneurs et les portiqueurs affectes a
- * l'operation. Le schema actuel ne stocke pas encore l'auteur exact de la
- * saisie ni sa date de creation.
+ * Retourne l'historique des conteneurs avec leur operation, leur date de
+ * creation et l'utilisateur ayant effectue la saisie.
  */
 const getContainers = async (req, res) => {
   try {
@@ -94,28 +107,19 @@ const getContainers = async (req, res) => {
          c.matricule_iso,
          c.image_url,
          c.ai_confidence,
-         NULL AS created_at,
+         c.created_at,
          o.nom_operation,
          o.date_operation,
          o.shift,
          o.vacation,
-         portiqueurs.portiqueur
+         u.id AS auteur_id,
+         u.nom_complet AS auteur_nom_complet,
+         u.matricule AS auteur_matricule,
+         u.role AS auteur_role
        FROM container c
        INNER JOIN operations o ON o.id = c.operation_id
-       LEFT JOIN (
-         SELECT
-           oe.operation_id,
-           GROUP_CONCAT(
-             DISTINCT CONCAT(u.nom_complet, ' (', u.matricule, ')')
-             ORDER BY u.nom_complet
-             SEPARATOR ', '
-           ) AS portiqueur
-         FROM operation_equipe oe
-         INNER JOIN users u ON u.id = oe.user_id
-         WHERE u.role = 'Portiqueur'
-         GROUP BY oe.operation_id
-       ) portiqueurs ON portiqueurs.operation_id = c.operation_id
-       ORDER BY c.id DESC`
+       LEFT JOIN users u ON u.id = c.created_by
+       ORDER BY c.created_at DESC, c.id DESC`
     );
 
     return res.status(200).json({
