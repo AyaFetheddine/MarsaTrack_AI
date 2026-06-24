@@ -28,11 +28,13 @@ export const operationsApi = {
 }
 
 export const arretsApi = {
+  list: () => api.get('/arrets'),
   create: (payload) => api.post('/arrets', payload),
   close: (id) => api.put(`/arrets/${id}/cloturer`),
 }
 
 export const containersApi = {
+  list: () => api.get('/containers'),
   create: (payload) => api.post('/containers', payload),
 }
 

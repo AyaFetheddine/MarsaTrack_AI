@@ -142,4 +142,48 @@ const cloturerArret = async (req, res) => {
   }
 };
 
-module.exports = { declarerArret, cloturerArret };
+/**
+ * Controleur : getArrets
+ * Route : GET /api/arrets
+ *
+ * Retourne l'historique des arrets avec leur operation et leur statut calcule.
+ * Le schema actuel ne stocke pas encore l'utilisateur declarant.
+ */
+const getArrets = async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT
+         a.id,
+         a.operation_id,
+         a.cause,
+         a.heure_debut,
+         a.heure_fin,
+         CASE
+           WHEN a.heure_fin IS NULL THEN 'en cours'
+           ELSE 'cloture'
+         END AS statut,
+         o.nom_operation,
+         o.date_operation,
+         o.shift,
+         o.vacation,
+         NULL AS declarant
+       FROM arrets_travail a
+       INNER JOIN operations o ON o.id = a.operation_id
+       ORDER BY a.heure_debut DESC, a.id DESC`
+    );
+
+    return res.status(200).json({
+      status : 'success',
+      count  : rows.length,
+      data   : rows,
+    });
+  } catch (error) {
+    console.error('[arretController] Erreur getArrets :', error.message);
+    return res.status(500).json({
+      status  : 'error',
+      message : 'Erreur interne du serveur lors de la recuperation des arrets.',
+    });
+  }
+};
+
+module.exports = { declarerArret, cloturerArret, getArrets };

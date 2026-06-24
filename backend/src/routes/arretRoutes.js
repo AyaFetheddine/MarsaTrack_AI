@@ -1,9 +1,20 @@
 const express = require('express');
 
-const { declarerArret, cloturerArret }    = require('../controllers/arretController');
+const { declarerArret, cloturerArret, getArrets } = require('../controllers/arretController');
 const { authenticateToken, authorizeRoles } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
+
+/**
+ * GET /api/arrets
+ * Recupere l'historique des arrets de travail.
+ * Accessible a tous les utilisateurs authentifies.
+ */
+router.get(
+  '/',
+  authenticateToken,
+  getArrets
+);
 
 /**
  * POST /api/arrets

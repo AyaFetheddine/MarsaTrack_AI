@@ -77,4 +77,59 @@ const saisirContainer = async (req, res) => {
   }
 };
 
-module.exports = { saisirContainer };
+/**
+ * Controleur : getContainers
+ * Route : GET /api/containers
+ *
+ * Retourne l'historique des conteneurs et les portiqueurs affectes a
+ * l'operation. Le schema actuel ne stocke pas encore l'auteur exact de la
+ * saisie ni sa date de creation.
+ */
+const getContainers = async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT
+         c.id,
+         c.operation_id,
+         c.matricule_iso,
+         c.image_url,
+         c.ai_confidence,
+         NULL AS created_at,
+         o.nom_operation,
+         o.date_operation,
+         o.shift,
+         o.vacation,
+         portiqueurs.portiqueur
+       FROM container c
+       INNER JOIN operations o ON o.id = c.operation_id
+       LEFT JOIN (
+         SELECT
+           oe.operation_id,
+           GROUP_CONCAT(
+             DISTINCT CONCAT(u.nom_complet, ' (', u.matricule, ')')
+             ORDER BY u.nom_complet
+             SEPARATOR ', '
+           ) AS portiqueur
+         FROM operation_equipe oe
+         INNER JOIN users u ON u.id = oe.user_id
+         WHERE u.role = 'Portiqueur'
+         GROUP BY oe.operation_id
+       ) portiqueurs ON portiqueurs.operation_id = c.operation_id
+       ORDER BY c.id DESC`
+    );
+
+    return res.status(200).json({
+      status : 'success',
+      count  : rows.length,
+      data   : rows,
+    });
+  } catch (error) {
+    console.error('[containerController] Erreur getContainers :', error.message);
+    return res.status(500).json({
+      status  : 'error',
+      message : 'Erreur interne du serveur lors de la recuperation des conteneurs.',
+    });
+  }
+};
+
+module.exports = { saisirContainer, getContainers };

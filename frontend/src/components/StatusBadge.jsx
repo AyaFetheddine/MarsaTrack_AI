@@ -4,12 +4,14 @@ function StatusBadge({ value }) {
   const styles = {
     'en cours': 'bg-[#e8f4fd] text-[#0055b3]',
     cloturee: 'bg-[#e0f7ee] text-[#00703c]',
+    cloture: 'bg-[#e0f7ee] text-[#00703c]',
     Portiqueur: 'bg-[#e8f4fd] text-[#0055b3]',
     Equipage: 'bg-[#eef2f6] text-[#4a6582]',
   }
 
   const labels = {
     cloturee: 'Cloturee',
+    cloture: 'Cloture',
   }
 
   return (

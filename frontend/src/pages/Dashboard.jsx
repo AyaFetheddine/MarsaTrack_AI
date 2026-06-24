@@ -8,6 +8,8 @@ import {
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import {
+  arretsApi,
+  containersApi,
   getApiErrorMessage,
   operationsApi,
   usersApi,
@@ -18,6 +20,8 @@ import StatCard from '../components/StatCard'
 
 function Dashboard() {
   const [operations, setOperations] = useState([])
+  const [arrets, setArrets] = useState([])
+  const [containers, setContainers] = useState([])
   const [personnelCount, setPersonnelCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -25,12 +29,21 @@ function Dashboard() {
   useEffect(() => {
     const loadDashboard = async () => {
       try {
-        const [operationsResponse, personnelResponse] = await Promise.all([
+        const [
+          operationsResponse,
+          arretsResponse,
+          containersResponse,
+          personnelResponse,
+        ] = await Promise.all([
           operationsApi.list(),
+          arretsApi.list(),
+          containersApi.list(),
           usersApi.personnel(),
         ])
 
         setOperations(operationsResponse.data.data || [])
+        setArrets(arretsResponse.data.data || [])
+        setContainers(containersResponse.data.data || [])
         setPersonnelCount((personnelResponse.data.data || []).length)
       } catch (requestError) {
         setError(
@@ -47,11 +60,14 @@ function Dashboard() {
     loadDashboard()
   }, [])
 
-  const activeCount = operations.filter(
+  const activeOperations = operations.filter(
     (operation) => operation.statut === 'en cours',
   ).length
-  const closedCount = operations.filter(
+  const closedOperations = operations.filter(
     (operation) => operation.statut === 'cloturee',
+  ).length
+  const activeArrets = arrets.filter(
+    (arret) => arret.statut === 'en cours',
   ).length
 
   const stats = [
@@ -63,25 +79,25 @@ function Dashboard() {
     },
     {
       title: 'Operations en cours',
-      value: activeCount,
+      value: activeOperations,
       icon: Timer,
       accentClass: 'bg-[#e5f7fb] text-marsa-ciel',
     },
     {
       title: 'Operations cloturees',
-      value: closedCount,
+      value: closedOperations,
       icon: CircleCheck,
       accentClass: 'bg-[#e7f7ef] text-[#148354]',
     },
     {
       title: 'Arrets en cours',
-      value: '--',
+      value: activeArrets,
       icon: OctagonAlert,
       accentClass: 'bg-[#fff1e8] text-[#c45a12]',
     },
     {
       title: 'Conteneurs saisis',
-      value: '--',
+      value: containers.length,
       icon: Boxes,
       accentClass: 'bg-[#eef2f6] text-[#4a6582]',
     },
@@ -118,23 +134,14 @@ function Dashboard() {
         </section>
       )}
 
-      <section className="page-card min-h-52">
+      <section className="page-card min-h-44">
         <h3 className="text-base font-bold text-marsa-royal">
-          Disponibilite des donnees
+          Synchronisation metier
         </h3>
         <p className="mt-1 text-sm text-marsa-muted">
-          Les operations et le personnel sont synchronises avec le backend.
+          Tous les indicateurs affiches sont maintenant calcules depuis les
+          donnees du backend MarsaTrack AI.
         </p>
-        <div className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
-          <div className="rounded-md border border-[#dce8f4] bg-[#f8fbff] p-4 text-[#345270]">
-            L'indicateur des arrets restera indisponible jusqu'a l'ajout d'un
-            endpoint GET dedie.
-          </div>
-          <div className="rounded-md border border-[#dce8f4] bg-[#f8fbff] p-4 text-[#345270]">
-            L'indicateur des conteneurs restera indisponible jusqu'a l'ajout
-            d'un endpoint GET dedie.
-          </div>
-        </div>
       </section>
     </div>
   )
