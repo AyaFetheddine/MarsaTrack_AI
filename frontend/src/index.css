@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    min-height: 100%;
+  }
+
+  body {
+    @apply m-0 min-h-screen bg-marsa-bg font-sans text-marsa-text antialiased;
+  }
+
+  button,
+  input {
+    font: inherit;
+  }
+
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .form-label {
+    @apply mb-1.5 block text-sm font-semibold text-[#1c3d6b];
+  }
+
+  .form-input {
+    @apply h-11 w-full rounded-md border border-[#c8d8e8] bg-[#f8fbff] pl-11 pr-3 text-[15px] text-[#0d253f] outline-none transition placeholder:text-[#9ab0c8] focus:border-marsa-ciel focus:bg-white focus:ring-4 focus:ring-marsa-ciel/15;
+  }
+
+  .page-card {
+    @apply rounded-lg border border-marsa-border bg-white p-5 shadow-card sm:p-6;
+  }
+}
