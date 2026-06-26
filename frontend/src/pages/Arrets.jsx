@@ -8,6 +8,7 @@ import {
 import FeedbackMessage from '../components/FeedbackMessage'
 import Loader from '../components/Loader'
 import StatusBadge from '../components/StatusBadge'
+import { getStoredRole } from '../utils/auth'
 
 const initialForm = {
   operation_id: '',
@@ -24,6 +25,8 @@ const formatDateTime = (value) => {
 }
 
 function Arrets() {
+  const role = getStoredRole()
+  const canManageArrets = role === 'Chef_Equipe'
   const [operations, setOperations] = useState([])
   const [arrets, setArrets] = useState([])
   const [form, setForm] = useState(initialForm)
@@ -140,7 +143,8 @@ function Arrets() {
         <FeedbackMessage type={feedback.type}>{feedback.message}</FeedbackMessage>
       )}
 
-      <section className="page-card">
+      {canManageArrets ? (
+        <section className="page-card">
         <div className="mb-5">
           <h3 className="font-bold text-marsa-royal">Declarer un arret</h3>
           <p className="mt-1 text-sm text-marsa-muted">
@@ -214,7 +218,15 @@ function Arrets() {
             Aucune operation en cours n'est disponible.
           </p>
         )}
-      </section>
+        </section>
+      ) : (
+        <section className="page-card border-dashed">
+          <h3 className="font-bold text-marsa-royal">Consultation uniquement</h3>
+          <p className="mt-1 text-sm text-marsa-muted">
+            Votre role permet la consultation, mais pas cette action.
+          </p>
+        </section>
+      )}
 
       <section className="page-card overflow-hidden p-0 sm:p-0">
         <div className="border-b border-marsa-border px-5 py-4 sm:px-6">
@@ -262,7 +274,7 @@ function Arrets() {
                         'Non renseigne'}
                     </td>
                     <td>
-                      {arret.statut === 'en cours' ? (
+                      {arret.statut === 'en cours' && canManageArrets ? (
                         <button
                           type="button"
                           onClick={() => handleClose(arret.id)}
@@ -274,6 +286,10 @@ function Arrets() {
                           )}
                           {closingId === arret.id ? 'Cloture...' : 'Cloturer'}
                         </button>
+                      ) : arret.statut === 'en cours' ? (
+                        <span className="text-xs text-marsa-muted">
+                          Consultation
+                        </span>
                       ) : (
                         <span className="text-xs text-marsa-muted">Termine</span>
                       )}

@@ -7,6 +7,7 @@ import {
 } from '../api/api'
 import FeedbackMessage from '../components/FeedbackMessage'
 import Loader from '../components/Loader'
+import { getStoredRole } from '../utils/auth'
 
 const ISO_6346_REGEX = /^[A-Z]{4}\d{7}$/
 
@@ -26,6 +27,8 @@ const formatDateTime = (value) => {
 }
 
 function Containers() {
+  const role = getStoredRole()
+  const canCreateContainer = role === 'Portiqueur'
   const [operations, setOperations] = useState([])
   const [containers, setContainers] = useState([])
   const [form, setForm] = useState(initialForm)
@@ -129,7 +132,8 @@ function Containers() {
         <FeedbackMessage type={feedback.type}>{feedback.message}</FeedbackMessage>
       )}
 
-      <section className="page-card">
+      {canCreateContainer ? (
+        <section className="page-card">
         <div className="mb-5">
           <h3 className="font-bold text-marsa-royal">Saisir un conteneur</h3>
           <p className="mt-1 text-sm text-marsa-muted">
@@ -219,7 +223,15 @@ function Containers() {
             Aucune operation en cours n'est disponible.
           </p>
         )}
-      </section>
+        </section>
+      ) : (
+        <section className="page-card border-dashed">
+          <h3 className="font-bold text-marsa-royal">Consultation uniquement</h3>
+          <p className="mt-1 text-sm text-marsa-muted">
+            Votre role permet la consultation, mais pas cette action.
+          </p>
+        </section>
+      )}
 
       <section className="page-card overflow-hidden p-0 sm:p-0">
         <div className="border-b border-marsa-border px-5 py-4 sm:px-6">

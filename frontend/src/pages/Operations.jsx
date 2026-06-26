@@ -8,6 +8,7 @@ import {
 import FeedbackMessage from '../components/FeedbackMessage'
 import Loader from '../components/Loader'
 import StatusBadge from '../components/StatusBadge'
+import { getStoredRole } from '../utils/auth'
 
 const initialForm = {
   nom_operation: '',
@@ -28,6 +29,11 @@ const formatDate = (value) => {
 }
 
 function Operations() {
+  const role = getStoredRole()
+  const canCreateOperation = ['Responsable_Exploitation', 'Chef_Equipe'].includes(
+    role,
+  )
+  const canCloseOperation = role === 'Chef_Services'
   const [operations, setOperations] = useState([])
   const [personnel, setPersonnel] = useState([])
   const [form, setForm] = useState(initialForm)
@@ -145,7 +151,8 @@ function Operations() {
         <FeedbackMessage type={feedback.type}>{feedback.message}</FeedbackMessage>
       )}
 
-      <section className="page-card">
+      {canCreateOperation ? (
+        <section className="page-card">
         <div className="mb-5">
           <h3 className="font-bold text-marsa-royal">Nouvelle operation</h3>
           <p className="mt-1 text-sm text-marsa-muted">
@@ -261,7 +268,15 @@ function Operations() {
             {submitting ? 'Creation...' : 'Creer l\'operation'}
           </button>
         </form>
-      </section>
+        </section>
+      ) : (
+        <section className="page-card border-dashed">
+          <h3 className="font-bold text-marsa-royal">Consultation uniquement</h3>
+          <p className="mt-1 text-sm text-marsa-muted">
+            Votre role permet la consultation, mais pas cette action.
+          </p>
+        </section>
+      )}
 
       <section className="page-card overflow-hidden p-0 sm:p-0">
         <div className="border-b border-marsa-border px-5 py-4 sm:px-6">
@@ -303,7 +318,7 @@ function Operations() {
                       <StatusBadge value={operation.statut} />
                     </td>
                     <td>
-                      {operation.statut === 'en cours' ? (
+                      {operation.statut === 'en cours' && canCloseOperation ? (
                         <button
                           type="button"
                           onClick={() => handleClose(operation.id)}
@@ -315,6 +330,10 @@ function Operations() {
                           )}
                           {closingId === operation.id ? 'Cloture...' : 'Cloturer'}
                         </button>
+                      ) : operation.statut === 'en cours' ? (
+                        <span className="text-xs text-marsa-muted">
+                          Consultation
+                        </span>
                       ) : (
                         <span className="text-xs text-marsa-muted">Terminee</span>
                       )}

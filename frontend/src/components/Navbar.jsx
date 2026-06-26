@@ -1,5 +1,6 @@
 import { LogOut, Menu } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { clearAuthSession, getStoredUser } from '../utils/auth'
 
 const pageTitles = {
   '/dashboard': 'Dashboard',
@@ -12,10 +13,10 @@ const pageTitles = {
 function Navbar({ onMenuOpen }) {
   const location = useLocation()
   const navigate = useNavigate()
+  const user = getStoredUser()
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
+    clearAuthSession()
     navigate('/login', { replace: true })
   }
 
@@ -35,14 +36,30 @@ function Navbar({ onMenuOpen }) {
         </h1>
       </div>
 
-      <button
-        type="button"
-        onClick={handleLogout}
-        className="flex h-9 items-center gap-2 rounded-md border border-[#c8d8e8] px-3 text-sm font-semibold text-marsa-royal transition hover:border-marsa-royal hover:bg-marsa-royal hover:text-white sm:px-4"
-      >
-        <LogOut size={17} aria-hidden="true" />
-        <span className="hidden sm:inline">Deconnexion</span>
-      </button>
+      <div className="flex min-w-0 items-center gap-3">
+        {user && (
+          <div className="hidden min-w-0 text-right md:block">
+            <p className="truncate text-sm font-bold text-marsa-royal">
+              {user.nom_complet || user.matricule}
+            </p>
+            <div className="mt-0.5 flex items-center justify-end gap-2">
+              <span className="text-xs text-marsa-muted">{user.matricule}</span>
+              <span className="rounded-full bg-[#e8f4fb] px-2 py-0.5 text-[11px] font-bold text-marsa-royal">
+                {user.role}
+              </span>
+            </div>
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex h-9 items-center gap-2 rounded-md border border-[#c8d8e8] px-3 text-sm font-semibold text-marsa-royal transition hover:border-marsa-royal hover:bg-marsa-royal hover:text-white sm:px-4"
+        >
+          <LogOut size={17} aria-hidden="true" />
+          <span className="hidden sm:inline">Deconnexion</span>
+        </button>
+      </div>
     </header>
   )
 }

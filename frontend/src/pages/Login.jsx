@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { authApi } from '../api/api'
 import logo from '../assets/Marsamaroc-logo.png'
+import { storeAuthSession } from '../utils/auth'
 
 function Login() {
   const navigate = useNavigate()
@@ -23,8 +24,10 @@ function Login() {
 
     try {
       const response = await authApi.login(form)
-      localStorage.setItem('token', response.data.token)
-      localStorage.setItem('user', JSON.stringify(response.data.user))
+      storeAuthSession({
+        token: response.data.token,
+        user: response.data.user,
+      })
       navigate('/dashboard', { replace: true })
     } catch (requestError) {
       setError(

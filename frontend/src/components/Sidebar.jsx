@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import logo from '../assets/Marsamaroc-logo.png'
+import { getStoredRole } from '../utils/auth'
 
 const navigation = [
   { to: '/dashboard', label: 'Dashboard', icon: Gauge },
@@ -17,7 +18,34 @@ const navigation = [
   { to: '/personnel', label: 'Personnel', icon: HardHat },
 ]
 
+const navigationByRole = {
+  Chef_Equipe: ['/dashboard', '/operations', '/arrets', '/personnel'],
+  Chef_Services: [
+    '/dashboard',
+    '/operations',
+    '/arrets',
+    '/containers',
+    '/personnel',
+  ],
+  Portiqueur: ['/dashboard', '/containers', '/operations'],
+  Responsable_Exploitation: [
+    '/dashboard',
+    '/operations',
+    '/arrets',
+    '/containers',
+    '/personnel',
+  ],
+  Chef_Escale: ['/dashboard', '/operations', '/arrets'],
+  Equipage: ['/dashboard', '/operations'],
+}
+
 function Sidebar({ open, onClose }) {
+  const role = getStoredRole()
+  const allowedPaths = navigationByRole[role] || ['/dashboard']
+  const visibleNavigation = navigation.filter((item) =>
+    allowedPaths.includes(item.to),
+  )
+
   return (
     <>
       {open && (
@@ -55,7 +83,7 @@ function Sidebar({ open, onClose }) {
         </div>
 
         <nav className="flex flex-col gap-1" aria-label="Navigation principale">
-          {navigation.map(({ to, label, icon: Icon }) => (
+          {visibleNavigation.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}

@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
+import RoleRoute from './components/RoleRoute'
 import DashboardLayout from './layouts/DashboardLayout'
 import Arrets from './pages/Arrets'
 import Containers from './pages/Containers'
@@ -9,6 +10,31 @@ import Operations from './pages/Operations'
 import Personnel from './pages/Personnel'
 
 function App() {
+  const allBusinessRoles = [
+    'Chef_Equipe',
+    'Chef_Services',
+    'Portiqueur',
+    'Responsable_Exploitation',
+    'Chef_Escale',
+    'Equipage',
+  ]
+  const arretsRoles = [
+    'Chef_Equipe',
+    'Chef_Services',
+    'Responsable_Exploitation',
+    'Chef_Escale',
+  ]
+  const containersRoles = [
+    'Chef_Services',
+    'Portiqueur',
+    'Responsable_Exploitation',
+  ]
+  const personnelRoles = [
+    'Chef_Equipe',
+    'Chef_Services',
+    'Responsable_Exploitation',
+  ]
+
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
@@ -16,10 +42,18 @@ function App() {
       <Route element={<ProtectedRoute />}>
         <Route element={<DashboardLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/operations" element={<Operations />} />
-          <Route path="/arrets" element={<Arrets />} />
-          <Route path="/containers" element={<Containers />} />
-          <Route path="/personnel" element={<Personnel />} />
+          <Route element={<RoleRoute allowedRoles={allBusinessRoles} />}>
+            <Route path="/operations" element={<Operations />} />
+          </Route>
+          <Route element={<RoleRoute allowedRoles={arretsRoles} />}>
+            <Route path="/arrets" element={<Arrets />} />
+          </Route>
+          <Route element={<RoleRoute allowedRoles={containersRoles} />}>
+            <Route path="/containers" element={<Containers />} />
+          </Route>
+          <Route element={<RoleRoute allowedRoles={personnelRoles} />}>
+            <Route path="/personnel" element={<Personnel />} />
+          </Route>
         </Route>
       </Route>
 
