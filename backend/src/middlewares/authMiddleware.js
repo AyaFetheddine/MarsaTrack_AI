@@ -47,6 +47,10 @@ const authenticateToken = (req, res, next) => {
  */
 const authorizeRoles = (...roles) => {
   return (req, res, next) => {
+    if (req.user.role === 'Admin') {
+      return next();
+    }
+
     // Vérifie que le rôle de l'utilisateur connecté est dans la liste autorisée
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({

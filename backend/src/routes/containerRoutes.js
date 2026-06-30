@@ -13,6 +13,7 @@ const router = express.Router();
 router.get(
   '/',
   authenticateToken,
+  authorizeRoles('Admin', 'Responsable_Exploitation', 'Chef_Services', 'Portiqueur'),
   getContainers
 );
 
@@ -24,7 +25,7 @@ router.get(
 router.post(
   '/',
   authenticateToken,
-  authorizeRoles('Portiqueur'),
+  authorizeRoles('Admin', 'Portiqueur'),
   saisirContainer
 );
 

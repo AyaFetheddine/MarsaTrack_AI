@@ -17,34 +17,52 @@ import {
 import FeedbackMessage from '../components/FeedbackMessage'
 import Loader from '../components/Loader'
 import StatCard from '../components/StatCard'
+import { getStoredRole } from '../utils/auth'
 
 function Dashboard() {
+  const role = getStoredRole()
+  const canViewArrets = [
+    'Admin',
+    'Responsable_Exploitation',
+    'Chef_Services',
+    'Chef_Escale',
+    'Chef_Equipe',
+  ].includes(role)
+  const canViewContainers = [
+    'Admin',
+    'Responsable_Exploitation',
+    'Chef_Services',
+    'Portiqueur',
+  ].includes(role)
+  const canViewPersonnel = [
+    'Admin',
+    'Responsable_Exploitation',
+    'Chef_Services',
+    'Chef_Equipe',
+  ].includes(role)
   const [operations, setOperations] = useState([])
   const [arrets, setArrets] = useState([])
   const [containers, setContainers] = useState([])
-  const [personnelCount, setPersonnelCount] = useState(0)
+  const [personnelCount, setPersonnelCount] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
     const loadDashboard = async () => {
       try {
-        const [
-          operationsResponse,
-          arretsResponse,
-          containersResponse,
-          personnelResponse,
-        ] = await Promise.all([
+        const [operationsResponse, arretsResponse, containersResponse, personnelResponse] = await Promise.all([
           operationsApi.list(),
-          arretsApi.list(),
-          containersApi.list(),
-          usersApi.personnel(),
+          canViewArrets ? arretsApi.list() : Promise.resolve(null),
+          canViewContainers ? containersApi.list() : Promise.resolve(null),
+          canViewPersonnel ? usersApi.personnel() : Promise.resolve(null),
         ])
 
         setOperations(operationsResponse.data.data || [])
-        setArrets(arretsResponse.data.data || [])
-        setContainers(containersResponse.data.data || [])
-        setPersonnelCount((personnelResponse.data.data || []).length)
+        setArrets(arretsResponse?.data.data || [])
+        setContainers(containersResponse?.data.data || [])
+        setPersonnelCount(
+          personnelResponse ? (personnelResponse.data.data || []).length : null,
+        )
       } catch (requestError) {
         setError(
           getApiErrorMessage(
@@ -58,7 +76,7 @@ function Dashboard() {
     }
 
     loadDashboard()
-  }, [])
+  }, [canViewArrets, canViewContainers, canViewPersonnel])
 
   const activeOperations = operations.filter(
     (operation) => operation.statut === 'en cours',
@@ -66,9 +84,9 @@ function Dashboard() {
   const closedOperations = operations.filter(
     (operation) => operation.statut === 'cloturee',
   ).length
-  const activeArrets = arrets.filter(
-    (arret) => arret.statut === 'en cours',
-  ).length
+  const activeArrets = canViewArrets
+    ? arrets.filter((arret) => arret.statut === 'en cours').length
+    : '-'
 
   const stats = [
     {
@@ -97,13 +115,13 @@ function Dashboard() {
     },
     {
       title: 'Conteneurs saisis',
-      value: containers.length,
+      value: canViewContainers ? containers.length : '-',
       icon: Boxes,
       accentClass: 'bg-[#eef2f6] text-[#4a6582]',
     },
     {
       title: 'Personnel disponible',
-      value: personnelCount,
+      value: canViewPersonnel ? personnelCount : '-',
       icon: HardHat,
       accentClass: 'bg-[#e7f7ef] text-[#148354]',
     },

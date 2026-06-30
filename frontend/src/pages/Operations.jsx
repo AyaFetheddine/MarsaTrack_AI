@@ -30,10 +30,12 @@ const formatDate = (value) => {
 
 function Operations() {
   const role = getStoredRole()
-  const canCreateOperation = ['Responsable_Exploitation', 'Chef_Equipe'].includes(
-    role,
-  )
-  const canCloseOperation = role === 'Chef_Services'
+  const canCreateOperation = [
+    'Admin',
+    'Responsable_Exploitation',
+    'Chef_Equipe',
+  ].includes(role)
+  const canCloseOperation = ['Admin', 'Chef_Services'].includes(role)
   const [operations, setOperations] = useState([])
   const [personnel, setPersonnel] = useState([])
   const [form, setForm] = useState(initialForm)
@@ -53,11 +55,11 @@ function Operations() {
       try {
         const [operationsResponse, personnelResponse] = await Promise.all([
           operationsApi.list(),
-          usersApi.personnel(),
+          canCreateOperation ? usersApi.personnel() : Promise.resolve(null),
         ])
 
         setOperations(operationsResponse.data.data || [])
-        setPersonnel(personnelResponse.data.data || [])
+        setPersonnel(personnelResponse?.data.data || [])
       } catch (requestError) {
         setPageError(
           getApiErrorMessage(
@@ -71,7 +73,7 @@ function Operations() {
     }
 
     loadPage()
-  }, [])
+  }, [canCreateOperation])
 
   const handleChange = (event) => {
     const { name, value } = event.target

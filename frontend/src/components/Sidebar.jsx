@@ -19,6 +19,13 @@ const navigation = [
 ]
 
 const navigationByRole = {
+  Admin: [
+    '/dashboard',
+    '/operations',
+    '/arrets',
+    '/containers',
+    '/personnel',
+  ],
   Chef_Equipe: ['/dashboard', '/operations', '/arrets', '/personnel'],
   Chef_Services: [
     '/dashboard',
@@ -36,7 +43,6 @@ const navigationByRole = {
     '/personnel',
   ],
   Chef_Escale: ['/dashboard', '/operations', '/arrets'],
-  Equipage: ['/dashboard', '/operations'],
 }
 
 function Sidebar({ open, onClose }) {

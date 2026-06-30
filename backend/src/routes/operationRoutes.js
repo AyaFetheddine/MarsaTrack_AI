@@ -13,7 +13,7 @@ const router = express.Router();
 router.post(
   '/',
   authenticateToken,
-  authorizeRoles('Responsable_Exploitation', 'Chef_Equipe'),
+  authorizeRoles('Admin', 'Responsable_Exploitation', 'Chef_Equipe'),
   createOperation
 );
 
@@ -25,6 +25,14 @@ router.post(
 router.get(
   '/',
   authenticateToken,
+  authorizeRoles(
+    'Admin',
+    'Responsable_Exploitation',
+    'Chef_Services',
+    'Chef_Escale',
+    'Chef_Equipe',
+    'Portiqueur'
+  ),
   getOperations
 );
 
@@ -36,7 +44,7 @@ router.get(
 router.put(
   '/:id/cloturer',
   authenticateToken,
-  authorizeRoles('Chef_Services'),
+  authorizeRoles('Admin', 'Chef_Services'),
   cloturerOperation
 );
 

@@ -28,7 +28,7 @@ const formatDateTime = (value) => {
 
 function Containers() {
   const role = getStoredRole()
-  const canCreateContainer = role === 'Portiqueur'
+  const canCreateContainer = ['Admin', 'Portiqueur'].includes(role)
   const [operations, setOperations] = useState([])
   const [containers, setContainers] = useState([])
   const [form, setForm] = useState(initialForm)

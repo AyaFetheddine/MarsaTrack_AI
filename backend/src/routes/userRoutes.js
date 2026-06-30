@@ -1,7 +1,7 @@
 const express = require('express');
 
 const { getPersonnel } = require('../controllers/userController');
-const { authenticateToken } = require('../middlewares/authMiddleware');
+const { authenticateToken, authorizeRoles } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
 
@@ -13,6 +13,7 @@ const router = express.Router();
 router.get(
   '/personnel',
   authenticateToken,
+  authorizeRoles('Admin', 'Responsable_Exploitation', 'Chef_Services', 'Chef_Equipe'),
   getPersonnel
 );
 

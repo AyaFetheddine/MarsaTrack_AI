@@ -7,11 +7,17 @@ function StatusBadge({ value }) {
     cloture: 'bg-[#e0f7ee] text-[#00703c]',
     Portiqueur: 'bg-[#e8f4fd] text-[#0055b3]',
     Equipage: 'bg-[#eef2f6] text-[#4a6582]',
+    Admin: 'bg-[#e0f7ee] text-[#00703c]',
+    Responsable_Exploitation: 'bg-[#e8f4fd] text-[#0055b3]',
   }
 
   const labels = {
     cloturee: 'Cloturee',
     cloture: 'Cloture',
+    Responsable_Exploitation: 'Responsable Exploitation',
+    Chef_Services: 'Chef Services',
+    Chef_Escale: 'Chef Escale',
+    Chef_Equipe: 'Chef Equipe',
   }
 
   return (

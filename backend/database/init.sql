@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS users (
   matricule     VARCHAR(50)   NOT NULL UNIQUE
                               COMMENT 'Identifiant badge unique employé Marsa Maroc',
   role          ENUM(
+                  'Admin',
                   'Responsable_Exploitation', -- Planificateur, définit les besoins et affecte les portiques
                   'Chef_Services',            -- Validateur final, clôture et verrouille l'opération
                   'Chef_Escale',              -- Superviseur global de plusieurs opérations simultanées
@@ -203,11 +204,20 @@ INSERT IGNORE INTO users (nom_complet, matricule, role, password_hash)
 VALUES (
   'Administrateur Système',
   'ADM-001',
-  'Chef_Escale',
+  'Admin',
   '***REDACTED-OLD-HASH***'
 );
 
 -- Utilisateur de test avec droits de création d'opérations (mot de passe : ***REDACTED-TEST-PASSWORD***)
+INSERT IGNORE INTO users (nom_complet, matricule, role, password_hash)
+VALUES (
+  'Responsable Exploitation Test',
+  'RE-001',
+  'Responsable_Exploitation',
+  '***REDACTED-OLD-HASH***'
+);
+
+-- Utilisateur de test avec droits de crÃ©ation d'opÃ©rations (mot de passe : ***REDACTED-TEST-PASSWORD***)
 INSERT IGNORE INTO users (nom_complet, matricule, role, password_hash)
 VALUES (
   'Chef Equipe Test',

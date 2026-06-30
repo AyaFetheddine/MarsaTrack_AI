@@ -11,25 +11,28 @@ import Personnel from './pages/Personnel'
 
 function App() {
   const allBusinessRoles = [
+    'Admin',
     'Chef_Equipe',
     'Chef_Services',
     'Portiqueur',
     'Responsable_Exploitation',
     'Chef_Escale',
-    'Equipage',
   ]
   const arretsRoles = [
+    'Admin',
     'Chef_Equipe',
     'Chef_Services',
     'Responsable_Exploitation',
     'Chef_Escale',
   ]
   const containersRoles = [
+    'Admin',
     'Chef_Services',
     'Portiqueur',
     'Responsable_Exploitation',
   ]
   const personnelRoles = [
+    'Admin',
     'Chef_Equipe',
     'Chef_Services',
     'Responsable_Exploitation',

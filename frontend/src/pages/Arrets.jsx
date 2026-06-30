@@ -26,7 +26,7 @@ const formatDateTime = (value) => {
 
 function Arrets() {
   const role = getStoredRole()
-  const canManageArrets = role === 'Chef_Equipe'
+  const canManageArrets = ['Admin', 'Chef_Equipe'].includes(role)
   const [operations, setOperations] = useState([])
   const [arrets, setArrets] = useState([])
   const [form, setForm] = useState(initialForm)

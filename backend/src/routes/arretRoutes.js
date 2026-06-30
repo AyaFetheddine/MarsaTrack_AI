@@ -13,6 +13,13 @@ const router = express.Router();
 router.get(
   '/',
   authenticateToken,
+  authorizeRoles(
+    'Admin',
+    'Responsable_Exploitation',
+    'Chef_Services',
+    'Chef_Escale',
+    'Chef_Equipe'
+  ),
   getArrets
 );
 
@@ -24,7 +31,7 @@ router.get(
 router.post(
   '/',
   authenticateToken,
-  authorizeRoles('Chef_Equipe'),
+  authorizeRoles('Admin', 'Chef_Equipe'),
   declarerArret
 );
 
@@ -36,7 +43,7 @@ router.post(
 router.put(
   '/:id/cloturer',
   authenticateToken,
-  authorizeRoles('Chef_Equipe'),
+  authorizeRoles('Admin', 'Chef_Equipe'),
   cloturerArret
 );
 

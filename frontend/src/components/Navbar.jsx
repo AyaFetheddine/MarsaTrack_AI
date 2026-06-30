@@ -1,6 +1,6 @@
 import { LogOut, Menu } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { clearAuthSession, getStoredUser } from '../utils/auth'
+import { clearAuthSession, formatRoleLabel, getStoredUser } from '../utils/auth'
 
 const pageTitles = {
   '/dashboard': 'Dashboard',
@@ -45,7 +45,7 @@ function Navbar({ onMenuOpen }) {
             <div className="mt-0.5 flex items-center justify-end gap-2">
               <span className="text-xs text-marsa-muted">{user.matricule}</span>
               <span className="rounded-full bg-[#e8f4fb] px-2 py-0.5 text-[11px] font-bold text-marsa-royal">
-                {user.role}
+                {formatRoleLabel(user.role)}
               </span>
             </div>
           </div>

@@ -57,3 +57,15 @@ export const getStoredRole = () =>
   getStoredUser()?.role || localStorage.getItem('role') || ''
 
 export const hasRole = (...roles) => roles.includes(getStoredRole())
+
+export const roleLabels = {
+  Admin: 'Admin',
+  Responsable_Exploitation: 'Responsable Exploitation',
+  Chef_Services: 'Chef Services',
+  Chef_Escale: 'Chef Escale',
+  Chef_Equipe: 'Chef Equipe',
+  Portiqueur: 'Portiqueur',
+  Equipage: 'Equipage',
+}
+
+export const formatRoleLabel = (role) => roleLabels[role] || role || ''
