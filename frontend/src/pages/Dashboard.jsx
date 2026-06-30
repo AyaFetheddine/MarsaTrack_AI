@@ -12,7 +12,7 @@ import {
   containersApi,
   getApiErrorMessage,
   operationsApi,
-  usersApi,
+  personnelApi,
 } from '../api/api'
 import FeedbackMessage from '../components/FeedbackMessage'
 import Loader from '../components/Loader'
@@ -54,7 +54,7 @@ function Dashboard() {
           operationsApi.list(),
           canViewArrets ? arretsApi.list() : Promise.resolve(null),
           canViewContainers ? containersApi.list() : Promise.resolve(null),
-          canViewPersonnel ? usersApi.personnel() : Promise.resolve(null),
+          canViewPersonnel ? personnelApi.list() : Promise.resolve(null),
         ])
 
         setOperations(operationsResponse.data.data || [])

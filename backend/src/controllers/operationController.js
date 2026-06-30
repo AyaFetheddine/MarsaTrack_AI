@@ -12,7 +12,7 @@ const { pool } = require('../config/db');
  *   "date_operation" : "2026-06-03",
  *   "shift"          : "Shift 1",
  *   "vacation"       : "Vacation 1",
- *   "equipe"         : [3, 4, 5]
+ *   "equipe"         : [3, 4, 5] // IDs de la table personnel
  * }
  */
 const createOperation = async (req, res) => {
@@ -47,12 +47,12 @@ const createOperation = async (req, res) => {
   if (!Array.isArray(equipe)) {
     return res.status(400).json({
       status  : 'error',
-      message : 'Le champ equipe doit etre un tableau d\'identifiants utilisateurs.',
+      message : 'Le champ equipe doit etre un tableau d\'identifiants personnel.',
     });
   }
 
-  const equipeIds = [...new Set(equipe.map((userId) => Number(userId)))];
-  if (equipeIds.some((userId) => !Number.isInteger(userId) || userId <= 0)) {
+  const equipeIds = [...new Set(equipe.map((personnelId) => Number(personnelId)))];
+  if (equipeIds.some((personnelId) => !Number.isInteger(personnelId) || personnelId <= 0)) {
     return res.status(400).json({
       status  : 'error',
       message : 'Chaque identifiant dans equipe doit etre un entier positif.',
@@ -67,8 +67,8 @@ const createOperation = async (req, res) => {
 
     if (equipeIds.length > 0) {
       const [personnelRows] = await connection.query(
-        'SELECT id FROM users WHERE role IN (?, ?) AND id IN (?)',
-        ['Portiqueur', 'Equipage', equipeIds]
+        'SELECT id FROM personnel WHERE disponibilite = ? AND id IN (?)',
+        ['disponible', equipeIds]
       );
 
       if (personnelRows.length !== equipeIds.length) {
@@ -76,7 +76,7 @@ const createOperation = async (req, res) => {
 
         return res.status(400).json({
           status  : 'error',
-          message : 'Le champ equipe contient un ou plusieurs utilisateurs invalides ou non affectables.',
+          message : 'Le champ equipe contient un ou plusieurs membres du personnel invalides ou indisponibles.',
         });
       }
     }
@@ -90,10 +90,10 @@ const createOperation = async (req, res) => {
     const operationId = result.insertId;
 
     if (equipeIds.length > 0) {
-      const values = equipeIds.map((userId) => [operationId, userId]);
+      const values = equipeIds.map((personnelId) => [operationId, personnelId]);
 
       await connection.query(
-        'INSERT INTO operation_equipe (operation_id, user_id) VALUES ?',
+        'INSERT INTO operation_personnel (operation_id, personnel_id) VALUES ?',
         [values]
       );
     }
@@ -141,10 +141,55 @@ const getOperations = async (req, res) => {
        ORDER BY date_operation DESC, id DESC`
     );
 
+    if (rows.length === 0) {
+      return res.status(200).json({
+        status : 'success',
+        count  : 0,
+        data   : [],
+      });
+    }
+
+    const operationIds = rows.map((operation) => operation.id);
+    const [personnelRows] = await pool.query(
+      `SELECT
+         op.operation_id,
+         p.id,
+         p.matricule,
+         p.nom_complet,
+         p.fonction,
+         p.disponibilite
+       FROM operation_personnel op
+       INNER JOIN personnel p ON p.id = op.personnel_id
+       WHERE op.operation_id IN (?)
+       ORDER BY p.fonction ASC, p.nom_complet ASC`,
+      [operationIds]
+    );
+
+    const personnelByOperation = personnelRows.reduce((acc, member) => {
+      if (!acc[member.operation_id]) {
+        acc[member.operation_id] = [];
+      }
+
+      acc[member.operation_id].push({
+        id             : member.id,
+        matricule      : member.matricule,
+        nom_complet    : member.nom_complet,
+        fonction       : member.fonction,
+        disponibilite  : member.disponibilite,
+      });
+
+      return acc;
+    }, {});
+
+    const operations = rows.map((operation) => ({
+      ...operation,
+      personnel: personnelByOperation[operation.id] || [],
+    }));
+
     return res.status(200).json({
       status : 'success',
-      count  : rows.length,
-      data   : rows,
+      count  : operations.length,
+      data   : operations,
     });
   } catch (error) {
     console.error('[operationController] Erreur getOperations :', error.message);

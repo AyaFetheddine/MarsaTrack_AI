@@ -13,6 +13,7 @@ const operationRoutes = require('./routes/operationRoutes');
 const arretRoutes     = require('./routes/arretRoutes');
 const containerRoutes = require('./routes/containerRoutes');
 const userRoutes      = require('./routes/userRoutes');
+const personnelRoutes = require('./routes/personnelRoutes');
 
 // ─── Initialisation de l'application Express ────────────────────────────────
 const app = express();
@@ -42,6 +43,9 @@ app.use('/api/containers', containerRoutes);
 
 // Module de consultation des utilisateurs et du personnel terrain
 app.use('/api/users', userRoutes);
+
+// Module de gestion du personnel operationnel affectable
+app.use('/api/personnel', personnelRoutes);
 
 /**
  * Health Check — GET /api/health

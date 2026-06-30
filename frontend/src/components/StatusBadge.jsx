@@ -9,6 +9,14 @@ function StatusBadge({ value }) {
     Equipage: 'bg-[#eef2f6] text-[#4a6582]',
     Admin: 'bg-[#e0f7ee] text-[#00703c]',
     Responsable_Exploitation: 'bg-[#e8f4fd] text-[#0055b3]',
+    Conducteur: 'bg-[#fff6df] text-[#9c6500]',
+    Pointeur: 'bg-[#f0e9ff] text-[#5a32a3]',
+    Agent_Terrain: 'bg-[#e5f7fb] text-[#00799c]',
+    Sous_Traitant: 'bg-[#fff1e8] text-[#c45a12]',
+    Autre: 'bg-[#eef2f6] text-[#4a6582]',
+    disponible: 'bg-[#e0f7ee] text-[#00703c]',
+    affecte: 'bg-[#e8f4fd] text-[#0055b3]',
+    indisponible: 'bg-[#fff2f2] text-[#b71c1c]',
   }
 
   const labels = {
@@ -18,6 +26,11 @@ function StatusBadge({ value }) {
     Chef_Services: 'Chef Services',
     Chef_Escale: 'Chef Escale',
     Chef_Equipe: 'Chef Equipe',
+    Agent_Terrain: 'Agent Terrain',
+    Sous_Traitant: 'Sous-Traitant',
+    disponible: 'Disponible',
+    affecte: 'Affecte',
+    indisponible: 'Indisponible',
   }
 
   return (

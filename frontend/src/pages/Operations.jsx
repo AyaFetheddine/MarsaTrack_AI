@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import {
   getApiErrorMessage,
   operationsApi,
-  usersApi,
+  personnelApi,
 } from '../api/api'
 import FeedbackMessage from '../components/FeedbackMessage'
 import Loader from '../components/Loader'
@@ -55,7 +55,9 @@ function Operations() {
       try {
         const [operationsResponse, personnelResponse] = await Promise.all([
           operationsApi.list(),
-          canCreateOperation ? usersApi.personnel() : Promise.resolve(null),
+          canCreateOperation
+            ? personnelApi.list({ disponibilite: 'disponible' })
+            : Promise.resolve(null),
         ])
 
         setOperations(operationsResponse.data.data || [])
@@ -100,7 +102,7 @@ function Operations() {
       await refreshOperations()
       setFeedback({
         type: 'success',
-        message: 'Operation creee et equipe affectee avec succes.',
+        message: 'Operation creee et personnel affecte avec succes.',
       })
     } catch (requestError) {
       setFeedback({
@@ -158,7 +160,7 @@ function Operations() {
         <div className="mb-5">
           <h3 className="font-bold text-marsa-royal">Nouvelle operation</h3>
           <p className="mt-1 text-sm text-marsa-muted">
-            Renseignez la vacation et selectionnez le personnel terrain.
+            Renseignez la vacation et selectionnez le personnel affectable.
           </p>
         </div>
 
@@ -229,10 +231,10 @@ function Operations() {
           </div>
 
           <fieldset>
-            <legend className="form-label">Equipe affectee</legend>
+            <legend className="form-label">Personnel affecte a l'operation</legend>
             {personnel.length === 0 ? (
               <div className="rounded-md border border-dashed border-[#c0d5e8] bg-[#f5f9fd] p-4 text-sm text-marsa-muted">
-                Aucun personnel affectable n'est disponible.
+                Aucun personnel disponible pour l'instant.
               </div>
             ) : (
               <div className="grid max-h-52 gap-2 overflow-y-auto rounded-md border border-marsa-border bg-[#f8fbff] p-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -252,7 +254,7 @@ function Operations() {
                         {member.nom_complet}
                       </span>
                       <span className="text-xs text-marsa-muted">
-                        {member.matricule} - {member.role}
+                        {member.matricule} - {member.fonction} - {member.disponibilite}
                       </span>
                     </span>
                   </label>

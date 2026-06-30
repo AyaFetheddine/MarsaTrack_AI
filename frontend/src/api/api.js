@@ -42,6 +42,11 @@ export const usersApi = {
   personnel: () => api.get('/users/personnel'),
 }
 
+export const personnelApi = {
+  list: (params = {}) => api.get('/personnel', { params }),
+  create: (payload) => api.post('/personnel', payload),
+}
+
 export const getApiErrorMessage = (
   error,
   fallback = 'Une erreur est survenue. Veuillez reessayer.',
