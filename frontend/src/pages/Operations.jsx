@@ -125,8 +125,8 @@ function Operations() {
     setForm((current) => ({ ...current, [name]: value }))
   }
 
-  const toggleMember = (userId) => {
-    const member = personnel.find((person) => person.id === userId)
+  const toggleMember = (personnelId) => {
+    const member = personnel.find((person) => person.id === personnelId)
 
     if (member && member.disponibilite !== 'disponible') {
       return
@@ -134,16 +134,16 @@ function Operations() {
 
     setForm((current) => ({
       ...current,
-      equipe: current.equipe.includes(userId)
-        ? current.equipe.filter((id) => id !== userId)
-        : [...current.equipe, userId],
+      equipe: current.equipe.includes(personnelId)
+        ? current.equipe.filter((id) => id !== personnelId)
+        : [...current.equipe, personnelId],
     }))
   }
 
-  const removeMember = (userId) => {
+  const removeMember = (personnelId) => {
     setForm((current) => ({
       ...current,
-      equipe: current.equipe.filter((id) => id !== userId),
+      equipe: current.equipe.filter((id) => id !== personnelId),
     }))
   }
 
@@ -221,7 +221,7 @@ function Operations() {
         <div className="mb-5">
           <h3 className="font-bold text-marsa-royal">Nouvelle operation</h3>
           <p className="mt-1 text-sm text-marsa-muted">
-            Renseignez la vacation et selectionnez le personnel affectable.
+            Selectionnez le personnel operationnel necessaire a cette operation.
           </p>
         </div>
 
@@ -320,11 +320,12 @@ function Operations() {
                           <button
                             type="button"
                             onClick={() => removeMember(member.id)}
-                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-marsa-muted transition hover:bg-[#e8f1fb] hover:text-marsa-royal"
+                            className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] text-marsa-muted transition hover:bg-[#e8f1fb] hover:text-marsa-royal"
                             aria-label={`Retirer ${member.nom_complet}`}
                             title="Retirer"
                           >
                             <X size={13} aria-hidden="true" />
+                            Retirer
                           </button>
                         </span>
                       ))}
