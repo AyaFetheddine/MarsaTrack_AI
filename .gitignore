@@ -84,3 +84,4 @@ coverage/
 # Fichiers temporaires
 *.tmp
 *.temp
+test-artifacts/
