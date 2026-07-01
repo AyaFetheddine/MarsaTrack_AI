@@ -12,8 +12,8 @@ import { getStoredRole } from '../utils/auth'
 
 const navigation = [
   { to: '/dashboard', label: 'Dashboard', icon: Gauge },
-  { to: '/operations', label: 'Operations', icon: ClipboardList },
-  { to: '/arrets', label: 'Arrets de travail', icon: OctagonAlert },
+  { to: '/operations', label: 'Opérations', icon: ClipboardList },
+  { to: '/arrets', label: 'Arrêts de travail', icon: OctagonAlert },
   { to: '/containers', label: 'Conteneurs', icon: Boxes },
   { to: '/personnel', label: 'Personnel', icon: HardHat },
 ]
@@ -110,7 +110,7 @@ function Sidebar({ open, onClose }) {
 
         <div className="mt-auto border-t border-white/15 px-3 pt-5">
           <p className="text-xs leading-5 text-white/50">
-            Gestion operationnelle
+            Gestion opérationnelle
             <br />
             Marsa Maroc
           </p>

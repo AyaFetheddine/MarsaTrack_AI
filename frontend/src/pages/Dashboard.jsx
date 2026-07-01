@@ -93,25 +93,25 @@ function Dashboard() {
 
   const stats = [
     {
-      title: 'Total operations',
+      title: 'Total opérations',
       value: operations.length,
       icon: ClipboardList,
       accentClass: 'bg-[#e8f1fb] text-marsa-royal',
     },
     {
-      title: 'Operations en cours',
+      title: 'Opérations en cours',
       value: activeOperations,
       icon: Timer,
       accentClass: 'bg-[#e5f7fb] text-marsa-ciel',
     },
     {
-      title: 'Operations cloturees',
+      title: 'Opérations clôturées',
       value: closedOperations,
       icon: CircleCheck,
       accentClass: 'bg-[#e7f7ef] text-[#148354]',
     },
     {
-      title: 'Arrets en cours',
+      title: 'Arrêts en cours',
       value: activeArrets,
       icon: OctagonAlert,
       accentClass: 'bg-[#fff1e8] text-[#c45a12]',
@@ -137,7 +137,7 @@ function Dashboard() {
           Vue d'ensemble
         </h2>
         <p className="text-sm text-marsa-muted">
-          Suivi synthetique de l'activite operationnelle du terminal.
+          Suivi synthétique de l'activité opérationnelle du terminal.
         </p>
       </header>
 
@@ -157,11 +157,11 @@ function Dashboard() {
 
       <section className="page-card min-h-44">
         <h3 className="text-base font-bold text-marsa-royal">
-          Synchronisation metier
+          Synchronisation métier
         </h3>
         <p className="mt-1 text-sm text-marsa-muted">
-          Tous les indicateurs affiches sont maintenant calcules depuis les
-          donnees du backend MarsaTrack AI.
+          Tous les indicateurs affichés sont maintenant calculés depuis les
+          données du backend MarsaTrack AI.
         </p>
       </section>
     </div>

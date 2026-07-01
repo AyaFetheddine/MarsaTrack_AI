@@ -45,6 +45,9 @@ export const usersApi = {
 export const personnelApi = {
   list: (params = {}) => api.get('/personnel', { params }),
   create: (payload) => api.post('/personnel', payload),
+  update: (id, payload) => api.put(`/personnel/${id}`, payload),
+  disable: (id) => api.patch(`/personnel/${id}/desactiver`),
+  remove: (id) => api.delete(`/personnel/${id}`),
 }
 
 export const getApiErrorMessage = (

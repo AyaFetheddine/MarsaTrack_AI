@@ -31,6 +31,21 @@ const fonctions = [
 
 const disponibilites = ['disponible', 'affecte', 'indisponible']
 
+const fonctionLabels = {
+  Equipage: 'Équipage',
+  Agent_Terrain: 'Agent Terrain',
+  Sous_Traitant: 'Sous-Traitant',
+}
+
+const disponibiliteLabels = {
+  disponible: 'Disponible',
+  affecte: 'Affecté',
+  indisponible: 'Indisponible',
+}
+
+const formatFonction = (value) => fonctionLabels[value] || value
+const formatDisponibilite = (value) => disponibiliteLabels[value] || value
+
 const formatDate = (value) => {
   if (!value) return '-'
 
@@ -109,7 +124,7 @@ function Operations() {
         setPageError(
           getApiErrorMessage(
             requestError,
-            'Impossible de charger les donnees des operations.',
+            'Impossible de charger les données des opérations.',
           ),
         )
       } finally {
@@ -163,14 +178,14 @@ function Operations() {
       await refreshOperations()
       setFeedback({
         type: 'success',
-        message: 'Operation creee et personnel affecte avec succes.',
+        message: 'Opération créée et personnel affecté avec succès.',
       })
     } catch (requestError) {
       setFeedback({
         type: 'error',
         message: getApiErrorMessage(
           requestError,
-          'Impossible de creer l\'operation.',
+          'Impossible de créer l\'opération.',
         ),
       })
     } finally {
@@ -187,14 +202,14 @@ function Operations() {
       await refreshOperations()
       setFeedback({
         type: 'success',
-        message: 'Operation cloturee avec succes.',
+        message: 'Opération clôturée avec succès.',
       })
     } catch (requestError) {
       setFeedback({
         type: 'error',
         message: getApiErrorMessage(
           requestError,
-          'Impossible de cloturer l\'operation.',
+          'Impossible de clôturer l\'opération.',
         ),
       })
     } finally {
@@ -205,9 +220,9 @@ function Operations() {
   return (
     <div className="space-y-6">
       <header>
-        <h2 className="mb-1 text-2xl font-bold text-marsa-royal">Operations</h2>
+        <h2 className="mb-1 text-2xl font-bold text-marsa-royal">Opérations</h2>
         <p className="text-sm text-marsa-muted">
-          Creation, affectation du personnel et suivi des operations portuaires.
+          Création, affectation du personnel et suivi des opérations portuaires.
         </p>
       </header>
 
@@ -219,9 +234,9 @@ function Operations() {
       {canCreateOperation ? (
         <section className="page-card">
         <div className="mb-5">
-          <h3 className="font-bold text-marsa-royal">Nouvelle operation</h3>
+          <h3 className="font-bold text-marsa-royal">Nouvelle opération</h3>
           <p className="mt-1 text-sm text-marsa-muted">
-            Selectionnez le personnel operationnel necessaire a cette operation.
+            Sélectionnez le personnel opérationnel nécessaire à cette opération.
           </p>
         </div>
 
@@ -229,7 +244,7 @@ function Operations() {
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <div className="md:col-span-2 xl:col-span-1">
               <label className="form-label" htmlFor="nom_operation">
-                Nom de l'operation
+                Nom de l'opération
               </label>
               <input
                 id="nom_operation"
@@ -237,7 +252,7 @@ function Operations() {
                 value={form.nom_operation}
                 onChange={handleChange}
                 className="form-control"
-                placeholder="Ex. Dechargement - Quai 5"
+                placeholder="Ex. Déchargement - Quai 5"
                 required
               />
             </div>
@@ -292,7 +307,7 @@ function Operations() {
           </div>
 
           <fieldset>
-            <legend className="form-label">Personnel affecte a l'operation</legend>
+            <legend className="form-label">Personnel affecté à l'opération</legend>
             {personnel.length === 0 ? (
               <div className="rounded-md border border-dashed border-[#c0d5e8] bg-[#f5f9fd] p-4 text-sm text-marsa-muted">
                 Aucun personnel disponible pour l'instant.
@@ -301,11 +316,11 @@ function Operations() {
               <div className="space-y-4 rounded-md border border-marsa-border bg-[#f8fbff] p-3">
                 <div>
                   <p className="mb-2 text-sm font-bold text-marsa-royal">
-                    Personnel selectionne
+                    Personnel sélectionné
                   </p>
                   {selectedPersonnel.length === 0 ? (
                     <p className="rounded-md border border-dashed border-[#c0d5e8] bg-white px-3 py-2 text-sm text-marsa-muted">
-                      Votre selection est vide.
+                      Votre sélection est vide.
                     </p>
                   ) : (
                     <div className="flex flex-wrap gap-2">
@@ -315,7 +330,7 @@ function Operations() {
                           className="inline-flex max-w-full items-center gap-2 rounded-full border border-[#c8d8e8] bg-white px-3 py-1.5 text-xs font-semibold text-marsa-text"
                         >
                           <span className="truncate">
-                            {member.nom_complet} - {member.matricule} - {member.fonction}
+                            {member.nom_complet} - {member.matricule} - {formatFonction(member.fonction)}
                           </span>
                           <button
                             type="button"
@@ -369,7 +384,7 @@ function Operations() {
                       <option value="all">Toutes les fonctions</option>
                       {fonctions.map((fonction) => (
                         <option key={fonction} value={fonction}>
-                          {fonction}
+                          {formatFonction(fonction)}
                         </option>
                       ))}
                     </select>
@@ -377,7 +392,7 @@ function Operations() {
 
                   <div>
                     <label className="form-label" htmlFor="operation-filter-disponibilite">
-                      Disponibilite
+                      Disponibilité
                     </label>
                     <select
                       id="operation-filter-disponibilite"
@@ -389,7 +404,7 @@ function Operations() {
                       <option value="all">Toutes</option>
                       {disponibilites.map((disponibilite) => (
                         <option key={disponibilite} value={disponibilite}>
-                          {disponibilite}
+                          {formatDisponibilite(disponibilite)}
                         </option>
                       ))}
                     </select>
@@ -400,7 +415,7 @@ function Operations() {
                   <div className="rounded-md border border-dashed border-[#c0d5e8] bg-white px-3 py-4 text-center text-sm text-marsa-muted">
                     {personnelFilters.disponibilite === 'disponible'
                       ? 'Aucun personnel disponible pour l\'instant.'
-                      : 'Aucun personnel ne correspond a votre recherche.'}
+                      : 'Aucun personnel ne correspond à votre recherche.'}
                   </div>
                 ) : (
                   <div className="grid max-h-64 gap-2 overflow-y-auto pr-1 sm:grid-cols-2 xl:grid-cols-3">
@@ -428,7 +443,7 @@ function Operations() {
                               {member.nom_complet}
                             </span>
                             <span className="text-xs text-marsa-muted">
-                              {member.matricule} - {member.fonction} - {member.disponibilite}
+                              {member.matricule} - {formatFonction(member.fonction)} - {formatDisponibilite(member.disponibilite)}
                             </span>
                           </span>
                         </label>
@@ -446,7 +461,7 @@ function Operations() {
             ) : (
               <ClipboardCheck size={18} />
             )}
-            {submitting ? 'Creation...' : 'Creer l\'operation'}
+            {submitting ? 'Création...' : 'Créer l\'opération'}
           </button>
         </form>
         </section>
@@ -454,31 +469,31 @@ function Operations() {
         <section className="page-card border-dashed">
           <h3 className="font-bold text-marsa-royal">Consultation uniquement</h3>
           <p className="mt-1 text-sm text-marsa-muted">
-            Votre role permet la consultation, mais pas cette action.
+            Votre rôle permet la consultation, mais pas cette action.
           </p>
         </section>
       )}
 
       <section className="page-card overflow-hidden p-0 sm:p-0">
         <div className="border-b border-marsa-border px-5 py-4 sm:px-6">
-          <h3 className="font-bold text-marsa-royal">Liste des operations</h3>
+          <h3 className="font-bold text-marsa-royal">Liste des opérations</h3>
           <p className="mt-1 text-sm text-marsa-muted">
-            {loading ? 'Chargement en cours' : `${operations.length} operation(s)`}
+            {loading ? 'Chargement en cours' : `${operations.length} opération(s)`}
           </p>
         </div>
 
         {loading ? (
-          <Loader label="Chargement des operations..." />
+          <Loader label="Chargement des opérations..." />
         ) : operations.length === 0 ? (
           <div className="px-6 py-12 text-center text-sm text-marsa-muted">
-            Aucune operation enregistree.
+            Aucune opération enregistrée.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="data-table min-w-[900px]">
               <thead>
                 <tr>
-                  <th>Nom operation</th>
+                  <th>Nom opération</th>
                   <th>Date</th>
                   <th>Shift</th>
                   <th>Vacation</th>
@@ -509,14 +524,14 @@ function Operations() {
                           {closingId === operation.id && (
                             <LoaderCircle size={15} className="animate-spin" />
                           )}
-                          {closingId === operation.id ? 'Cloture...' : 'Cloturer'}
+                          {closingId === operation.id ? 'Clôture...' : 'Clôturer'}
                         </button>
                       ) : operation.statut === 'en cours' ? (
                         <span className="text-xs text-marsa-muted">
                           Consultation
                         </span>
                       ) : (
-                        <span className="text-xs text-marsa-muted">Terminee</span>
+                        <span className="text-xs text-marsa-muted">Terminée</span>
                       )}
                     </td>
                   </tr>

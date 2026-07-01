@@ -62,7 +62,7 @@ function Arrets() {
           type: 'error',
           message: getApiErrorMessage(
             requestError,
-            'Impossible de charger les arrets de travail.',
+            'Impossible de charger les arrêts de travail.',
           ),
         })
       } finally {
@@ -92,14 +92,14 @@ function Arrets() {
       await refreshArrets()
       setFeedback({
         type: 'success',
-        message: 'Arret de travail declare avec succes.',
+        message: 'Arrêt de travail déclaré avec succès.',
       })
     } catch (requestError) {
       setFeedback({
         type: 'error',
         message: getApiErrorMessage(
           requestError,
-          'Impossible de declarer l\'arret de travail.',
+          'Impossible de déclarer l\'arrêt de travail.',
         ),
       })
     } finally {
@@ -116,14 +116,14 @@ function Arrets() {
       await refreshArrets()
       setFeedback({
         type: 'success',
-        message: 'Arret de travail cloture avec succes.',
+        message: 'Arrêt de travail clôturé avec succès.',
       })
     } catch (requestError) {
       setFeedback({
         type: 'error',
         message: getApiErrorMessage(
           requestError,
-          'Impossible de cloturer l\'arret de travail.',
+          'Impossible de clôturer l\'arrêt de travail.',
         ),
       })
     } finally {
@@ -135,10 +135,10 @@ function Arrets() {
     <div className="space-y-6">
       <header>
         <h2 className="mb-1 text-2xl font-bold text-marsa-royal">
-          Arrets de travail
+          Arrêts de travail
         </h2>
         <p className="text-sm text-marsa-muted">
-          Declaration et suivi des interruptions terrain.
+          Déclaration et suivi des interruptions terrain.
         </p>
       </header>
 
@@ -149,14 +149,14 @@ function Arrets() {
       {canManageArrets ? (
         <section className="page-card">
         <div className="mb-5">
-          <h3 className="font-bold text-marsa-royal">Declarer un arret</h3>
+          <h3 className="font-bold text-marsa-royal">Déclarer un arrêt</h3>
           <p className="mt-1 text-sm text-marsa-muted">
-            Associez l'incident a une operation en cours.
+            Associez l'incident à une opération en cours.
           </p>
         </div>
 
         {loading ? (
-          <Loader label="Chargement des operations..." />
+          <Loader label="Chargement des opérations..." />
         ) : (
           <form
             className="grid items-end gap-4 md:grid-cols-[minmax(0,1fr)_minmax(220px,0.7fr)_auto]"
@@ -164,7 +164,7 @@ function Arrets() {
           >
             <div>
               <label className="form-label" htmlFor="arret-operation">
-                Operation
+                Opération
               </label>
               <select
                 id="arret-operation"
@@ -175,7 +175,7 @@ function Arrets() {
                 required
                 disabled={operations.length === 0}
               >
-                <option value="">Selectionner une operation</option>
+                <option value="">Sélectionner une opération</option>
                 {operations.map((operation) => (
                   <option key={operation.id} value={operation.id}>
                     {operation.nom_operation} - {operation.shift}
@@ -196,7 +196,7 @@ function Arrets() {
                 className="form-control"
               >
                 <option value="panne grue">Panne grue</option>
-                <option value="manque de matériel">Manque de materiel</option>
+                <option value="manque de matériel">Manque de matériel</option>
                 <option value="attente camion">Attente camion</option>
               </select>
             </div>
@@ -211,14 +211,14 @@ function Arrets() {
               ) : (
                 <OctagonAlert size={18} />
               )}
-              {submitting ? 'Declaration...' : 'Declarer'}
+              {submitting ? 'Déclaration...' : 'Déclarer'}
             </button>
           </form>
         )}
 
         {!loading && operations.length === 0 && (
           <p className="mt-4 rounded-md border border-dashed border-[#c0d5e8] bg-[#f5f9fd] p-3 text-sm text-marsa-muted">
-            Aucune operation en cours n'est disponible.
+            Aucune opération en cours n'est disponible.
           </p>
         )}
         </section>
@@ -226,36 +226,36 @@ function Arrets() {
         <section className="page-card border-dashed">
           <h3 className="font-bold text-marsa-royal">Consultation uniquement</h3>
           <p className="mt-1 text-sm text-marsa-muted">
-            Votre role permet la consultation, mais pas cette action.
+            Votre rôle permet la consultation, mais pas cette action.
           </p>
         </section>
       )}
 
       <section className="page-card overflow-hidden p-0 sm:p-0">
         <div className="border-b border-marsa-border px-5 py-4 sm:px-6">
-          <h3 className="font-bold text-marsa-royal">Historique des arrets</h3>
+          <h3 className="font-bold text-marsa-royal">Historique des arrêts</h3>
           <p className="mt-1 text-sm text-marsa-muted">
-            {loading ? 'Chargement en cours' : `${arrets.length} arret(s)`}
+            {loading ? 'Chargement en cours' : `${arrets.length} arrêt(s)`}
           </p>
         </div>
 
         {loading ? (
-          <Loader label="Chargement des arrets..." />
+          <Loader label="Chargement des arrêts..." />
         ) : arrets.length === 0 ? (
           <div className="px-6 py-12 text-center text-sm text-marsa-muted">
-            Aucun arret de travail enregistre.
+            Aucun arrêt de travail enregistré.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="data-table min-w-[1080px]">
               <thead>
                 <tr>
-                  <th>Operation</th>
+                  <th>Opération</th>
                   <th>Cause</th>
-                  <th>Debut</th>
+                  <th>Début</th>
                   <th>Fin</th>
                   <th>Statut</th>
-                  <th>Declare par</th>
+                  <th>Déclaré par</th>
                   <th>Action</th>
                 </tr>
               </thead>
@@ -274,7 +274,7 @@ function Arrets() {
                     <td>
                       {arret.declarant_nom_complet ||
                         arret.declarant_matricule ||
-                        'Non renseigne'}
+                        'Non renseigné'}
                     </td>
                     <td>
                       {arret.statut === 'en cours' && canManageArrets ? (
@@ -287,14 +287,14 @@ function Arrets() {
                           {closingId === arret.id && (
                             <LoaderCircle size={15} className="animate-spin" />
                           )}
-                          {closingId === arret.id ? 'Cloture...' : 'Cloturer'}
+                          {closingId === arret.id ? 'Clôture...' : 'Clôturer'}
                         </button>
                       ) : arret.statut === 'en cours' ? (
                         <span className="text-xs text-marsa-muted">
                           Consultation
                         </span>
                       ) : (
-                        <span className="text-xs text-marsa-muted">Termine</span>
+                        <span className="text-xs text-marsa-muted">Terminé</span>
                       )}
                     </td>
                   </tr>

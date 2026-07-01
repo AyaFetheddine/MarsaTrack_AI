@@ -20,16 +20,17 @@ function StatusBadge({ value }) {
   }
 
   const labels = {
-    cloturee: 'Cloturee',
-    cloture: 'Cloture',
+    cloturee: 'Clôturée',
+    cloture: 'Clôturé',
     Responsable_Exploitation: 'Responsable Exploitation',
     Chef_Services: 'Chef Services',
     Chef_Escale: 'Chef Escale',
-    Chef_Equipe: 'Chef Equipe',
+    Chef_Equipe: 'Chef Équipe',
+    Equipage: 'Équipage',
     Agent_Terrain: 'Agent Terrain',
     Sous_Traitant: 'Sous-Traitant',
     disponible: 'Disponible',
-    affecte: 'Affecte',
+    affecte: 'Affecté',
     indisponible: 'Indisponible',
   }
 

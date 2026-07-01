@@ -4,8 +4,8 @@ import { clearAuthSession, formatRoleLabel, getStoredUser } from '../utils/auth'
 
 const pageTitles = {
   '/dashboard': 'Dashboard',
-  '/operations': 'Operations',
-  '/arrets': 'Arrets de travail',
+  '/operations': 'Opérations',
+  '/arrets': 'Arrêts de travail',
   '/containers': 'Conteneurs',
   '/personnel': 'Personnel',
 }
@@ -57,7 +57,7 @@ function Navbar({ onMenuOpen }) {
           className="flex h-9 items-center gap-2 rounded-md border border-[#c8d8e8] px-3 text-sm font-semibold text-marsa-royal transition hover:border-marsa-royal hover:bg-marsa-royal hover:text-white sm:px-4"
         >
           <LogOut size={17} aria-hidden="true" />
-          <span className="hidden sm:inline">Deconnexion</span>
+          <span className="hidden sm:inline">Déconnexion</span>
         </button>
       </div>
     </header>

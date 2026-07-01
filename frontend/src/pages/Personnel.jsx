@@ -1,10 +1,20 @@
-import { LoaderCircle, Search, UserPlus } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import {
+  Ban,
+  LoaderCircle,
+  Pencil,
+  Search,
+  Trash2,
+  UserPlus,
+  X,
+} from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { getApiErrorMessage, personnelApi } from '../api/api'
-import FeedbackMessage from '../components/FeedbackMessage'
+import ConfirmDialog from '../components/ConfirmDialog'
 import Loader from '../components/Loader'
 import StatusBadge from '../components/StatusBadge'
+import ToastMessage from '../components/ToastMessage'
 import useAutoClearMessage from '../hooks/useAutoClearMessage'
+import useDebouncedValue from '../hooks/useDebouncedValue'
 import { getStoredRole } from '../utils/auth'
 
 const fonctions = [
@@ -19,6 +29,21 @@ const fonctions = [
 
 const disponibilites = ['disponible', 'affecte', 'indisponible']
 
+const fonctionLabels = {
+  Equipage: 'Équipage',
+  Agent_Terrain: 'Agent Terrain',
+  Sous_Traitant: 'Sous-Traitant',
+}
+
+const disponibiliteLabels = {
+  disponible: 'Disponible',
+  affecte: 'Affecté',
+  indisponible: 'Indisponible',
+}
+
+const formatFonction = (value) => fonctionLabels[value] || value
+const formatDisponibilite = (value) => disponibiliteLabels[value] || value
+
 const initialForm = {
   matricule: '',
   nom_complet: '',
@@ -28,11 +53,16 @@ const initialForm = {
 
 function Personnel() {
   const role = getStoredRole()
-  const canCreatePersonnel = ['Admin', 'Responsable_Exploitation'].includes(role)
+  const canManagePersonnel = ['Admin', 'Responsable_Exploitation'].includes(role)
+  const formSectionRef = useRef(null)
   const [personnel, setPersonnel] = useState([])
   const [form, setForm] = useState(initialForm)
+  const [editingPersonnelId, setEditingPersonnelId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [actionId, setActionId] = useState(null)
+  const [pendingAction, setPendingAction] = useState(null)
+  const [highlightForm, setHighlightForm] = useState(false)
   const [error, setError] = useState('')
   const [feedback, setFeedback] = useState(null)
   const [filters, setFilters] = useState({
@@ -40,9 +70,10 @@ function Personnel() {
     fonction: 'all',
     disponibilite: 'all',
   })
+  const debouncedSearch = useDebouncedValue(filters.search, 300)
 
   const filteredPersonnel = useMemo(() => {
-    const searchTerm = filters.search.trim().toLowerCase()
+    const searchTerm = debouncedSearch.trim().toLowerCase()
 
     return personnel.filter((member) => {
       const matchesSearch =
@@ -57,7 +88,7 @@ function Personnel() {
 
       return matchesSearch && matchesFonction && matchesDisponibilite
     })
-  }, [filters, personnel])
+  }, [debouncedSearch, filters, personnel])
 
   useAutoClearMessage(error, setError, '')
   useAutoClearMessage(feedback, setFeedback)
@@ -96,25 +127,67 @@ function Personnel() {
     setFilters((current) => ({ ...current, [name]: value }))
   }
 
+  const resetForm = () => {
+    setForm(initialForm)
+    setEditingPersonnelId(null)
+  }
+
+  const startEdit = (member) => {
+    setEditingPersonnelId(member.id)
+    setForm({
+      matricule: member.matricule,
+      nom_complet: member.nom_complet,
+      fonction: member.fonction,
+      disponibilite: member.disponibilite,
+    })
+    setFeedback(null)
+    setHighlightForm(true)
+    window.requestAnimationFrame(() => {
+      formSectionRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    })
+  }
+
+  useEffect(() => {
+    if (!highlightForm) return undefined
+
+    const timeoutId = window.setTimeout(() => {
+      setHighlightForm(false)
+    }, 1400)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [highlightForm])
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     setSubmitting(true)
     setFeedback(null)
 
     try {
-      await personnelApi.create(form)
-      setForm(initialForm)
+      if (editingPersonnelId) {
+        await personnelApi.update(editingPersonnelId, form)
+      } else {
+        await personnelApi.create(form)
+      }
+
+      resetForm()
       await refreshPersonnel()
       setFeedback({
         type: 'success',
-        message: 'Personnel ajoute avec succes.',
+        message: editingPersonnelId
+          ? 'Personnel modifié avec succès.'
+          : 'Personnel ajouté avec succès.',
       })
     } catch (requestError) {
       setFeedback({
         type: 'error',
         message: getApiErrorMessage(
           requestError,
-          'Impossible d\'ajouter ce personnel.',
+          editingPersonnelId
+            ? 'Impossible de modifier ce personnel.'
+            : 'Impossible d\'ajouter ce personnel.',
         ),
       })
     } finally {
@@ -122,26 +195,119 @@ function Personnel() {
     }
   }
 
+  const requestDisable = (member) => {
+    setPendingAction({
+      member,
+      type: 'disable',
+    })
+  }
+
+  const requestDelete = (member) => {
+    setPendingAction({
+      member,
+      type: 'delete',
+    })
+  }
+
+  const closeConfirmDialog = () => {
+    if (actionId) return
+    setPendingAction(null)
+  }
+
+  const confirmPendingAction = async () => {
+    if (!pendingAction) return
+
+    const { member, type } = pendingAction
+
+    setActionId(member.id)
+    setFeedback(null)
+
+    try {
+      if (type === 'disable') {
+        await personnelApi.disable(member.id)
+      } else {
+        await personnelApi.remove(member.id)
+        if (editingPersonnelId === member.id) {
+          resetForm()
+        }
+      }
+
+      await refreshPersonnel()
+      setFeedback({
+        type: 'success',
+        message:
+          type === 'disable'
+            ? 'Personnel désactivé avec succès.'
+            : 'Personnel supprimé avec succès.',
+      })
+    } catch (requestError) {
+      setFeedback({
+        type: 'error',
+        message: getApiErrorMessage(
+          requestError,
+          type === 'disable'
+            ? 'Impossible de désactiver ce personnel.'
+            : 'Impossible de supprimer ce personnel.',
+        ),
+      })
+    } finally {
+      setActionId(null)
+      setPendingAction(null)
+    }
+  }
+
+  const confirmationContent = pendingAction
+    ? {
+        confirmLabel:
+          pendingAction.type === 'disable' ? 'Désactiver' : 'Supprimer',
+        description:
+          pendingAction.type === 'disable'
+            ? `${pendingAction.member.nom_complet} ne sera plus proposé dans les affectations. Son historique restera conservé.`
+            : `${pendingAction.member.nom_complet} sera supprimé uniquement s'il n'est affecté à aucune opération.`,
+        title:
+          pendingAction.type === 'disable'
+            ? 'Désactiver ce personnel ?'
+            : 'Supprimer ce personnel ?',
+        tone: pendingAction.type === 'disable' ? 'warning' : 'danger',
+      }
+    : null
+
   return (
     <div className="space-y-6">
       <header>
         <h2 className="mb-1 text-2xl font-bold text-marsa-royal">Personnel</h2>
         <p className="text-sm text-marsa-muted">
-          Gestion du personnel operationnel affectable aux operations.
+          Gestion du personnel opérationnel affectable aux opérations.
         </p>
       </header>
 
-      {error && <FeedbackMessage>{error}</FeedbackMessage>}
-      {feedback && (
-        <FeedbackMessage type={feedback.type}>{feedback.message}</FeedbackMessage>
+      {(error || feedback) && (
+        <ToastMessage
+          message={feedback || error}
+          onClose={() => {
+            setFeedback(null)
+            setError('')
+          }}
+        />
       )}
 
-      {canCreatePersonnel ? (
-        <section className="page-card">
+      {canManagePersonnel ? (
+        <section
+          ref={formSectionRef}
+          className={`scroll-mt-24 page-card transition duration-500 ${
+            highlightForm
+              ? 'border-marsa-ciel ring-4 ring-marsa-ciel/20'
+              : ''
+          }`}
+        >
           <div className="mb-5">
-            <h3 className="font-bold text-marsa-royal">Ajouter du personnel</h3>
+            <h3 className="font-bold text-marsa-royal">
+              {editingPersonnelId ? 'Modifier un personnel' : 'Ajouter du personnel'}
+            </h3>
             <p className="mt-1 text-sm text-marsa-muted">
-              Creez une ressource terrain affectable sans compte de connexion.
+              {editingPersonnelId
+                ? 'Corrigez les informations du personnel opérationnel.'
+                : 'Créez une ressource terrain affectable sans compte de connexion.'}
             </p>
           </div>
 
@@ -192,7 +358,7 @@ function Personnel() {
               >
                 {fonctions.map((fonction) => (
                   <option key={fonction} value={fonction}>
-                    {fonction}
+                    {formatFonction(fonction)}
                   </option>
                 ))}
               </select>
@@ -200,7 +366,7 @@ function Personnel() {
 
             <div>
               <label className="form-label" htmlFor="disponibilite">
-                Disponibilite
+                Disponibilité
               </label>
               <select
                 id="disponibilite"
@@ -211,27 +377,46 @@ function Personnel() {
               >
                 {disponibilites.map((disponibilite) => (
                   <option key={disponibilite} value={disponibilite}>
-                    {disponibilite}
+                    {formatDisponibilite(disponibilite)}
                   </option>
                 ))}
               </select>
             </div>
 
-            <button type="submit" className="primary-button" disabled={submitting}>
-              {submitting ? (
-                <LoaderCircle size={18} className="animate-spin" />
-              ) : (
-                <UserPlus size={18} />
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="submit" className="primary-button" disabled={submitting}>
+                {submitting ? (
+                  <LoaderCircle size={18} className="animate-spin" />
+                ) : editingPersonnelId ? (
+                  <Pencil size={18} />
+                ) : (
+                  <UserPlus size={18} />
+                )}
+                {submitting
+                  ? 'Enregistrement...'
+                  : editingPersonnelId
+                    ? 'Enregistrer les modifications'
+                    : 'Ajouter'}
+              </button>
+
+              {editingPersonnelId && (
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-md border border-[#c8d8e8] px-4 text-sm font-bold text-marsa-royal transition hover:border-marsa-royal hover:bg-[#eef5fb]"
+                >
+                  <X size={17} />
+                  Annuler la modification
+                </button>
               )}
-              {submitting ? 'Ajout...' : 'Ajouter'}
-            </button>
+            </div>
           </form>
         </section>
       ) : (
         <section className="page-card border-dashed">
           <h3 className="font-bold text-marsa-royal">Consultation uniquement</h3>
           <p className="mt-1 text-sm text-marsa-muted">
-            Votre role permet la consultation, mais pas cette action.
+            Votre rôle permet la consultation, mais pas cette action.
           </p>
         </section>
       )}
@@ -242,7 +427,7 @@ function Personnel() {
           <p className="mt-1 text-sm text-marsa-muted">
             {loading
               ? 'Chargement en cours'
-              : `${filteredPersonnel.length} resultat(s)`}
+              : `${filteredPersonnel.length} résultat(s)`}
           </p>
         </div>
 
@@ -290,7 +475,7 @@ function Personnel() {
                   <option value="all">Toutes les fonctions</option>
                   {fonctions.map((fonction) => (
                     <option key={fonction} value={fonction}>
-                      {fonction}
+                      {formatFonction(fonction)}
                     </option>
                   ))}
                 </select>
@@ -298,7 +483,7 @@ function Personnel() {
 
               <div>
                 <label className="form-label" htmlFor="filter-disponibilite">
-                  Disponibilite
+                  Disponibilité
                 </label>
                 <select
                   id="filter-disponibilite"
@@ -310,7 +495,7 @@ function Personnel() {
                   <option value="all">Toutes</option>
                   {disponibilites.map((disponibilite) => (
                     <option key={disponibilite} value={disponibilite}>
-                      {disponibilite}
+                      {formatDisponibilite(disponibilite)}
                     </option>
                   ))}
                 </select>
@@ -319,34 +504,82 @@ function Personnel() {
 
             {filteredPersonnel.length === 0 ? (
               <div className="px-6 py-12 text-center text-sm text-marsa-muted">
-                Aucun personnel ne correspond a votre recherche.
+                Aucun personnel ne correspond à votre recherche.
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="data-table min-w-[760px]">
+                <table className="data-table min-w-[900px]">
                   <thead>
                     <tr>
                       <th>Matricule</th>
                       <th>Nom complet</th>
                       <th>Fonction</th>
-                      <th>Disponibilite</th>
+                      <th>Disponibilité</th>
+                      {canManagePersonnel && <th>Actions</th>}
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredPersonnel.map((member) => (
-                      <tr key={member.id}>
-                        <td className="font-semibold text-marsa-text">
-                          {member.matricule}
-                        </td>
-                        <td>{member.nom_complet}</td>
-                        <td>
-                          <StatusBadge value={member.fonction} />
-                        </td>
-                        <td>
-                          <StatusBadge value={member.disponibilite} />
-                        </td>
-                      </tr>
-                    ))}
+                    {filteredPersonnel.map((member) => {
+                      const isBusy = actionId === member.id
+                      const isInactive = member.disponibilite === 'indisponible'
+
+                      return (
+                        <tr key={member.id}>
+                          <td className="font-semibold text-marsa-text">
+                            {member.matricule}
+                          </td>
+                          <td>{member.nom_complet}</td>
+                          <td>
+                            <StatusBadge value={member.fonction} />
+                          </td>
+                          <td>
+                            <StatusBadge value={member.disponibilite} />
+                          </td>
+                          {canManagePersonnel && (
+                            <td>
+                              <div className="flex flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => startEdit(member)}
+                                  className="inline-flex min-h-9 items-center gap-1 rounded-md border border-[#c8d8e8] px-3 text-xs font-bold text-marsa-royal transition hover:border-marsa-royal hover:bg-[#eef5fb]"
+                                >
+                                  <Pencil size={14} />
+                                  Modifier
+                                </button>
+                                {!isInactive && (
+                                  <button
+                                    type="button"
+                                    onClick={() => requestDisable(member)}
+                                    disabled={isBusy}
+                                    className="inline-flex min-h-9 items-center gap-1 rounded-md border border-[#f0d0b8] px-3 text-xs font-bold text-[#b45309] transition hover:border-[#b45309] hover:bg-[#fff7ed] disabled:opacity-60"
+                                  >
+                                    {isBusy ? (
+                                      <LoaderCircle size={14} className="animate-spin" />
+                                    ) : (
+                                      <Ban size={14} />
+                                    )}
+                                    Désactiver
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => requestDelete(member)}
+                                  disabled={isBusy}
+                                  className="inline-flex min-h-9 items-center gap-1 rounded-md border border-[#f3b4b4] px-3 text-xs font-bold text-[#b91c1c] transition hover:border-[#b91c1c] hover:bg-[#fff1f2] disabled:opacity-60"
+                                >
+                                  {isBusy ? (
+                                    <LoaderCircle size={14} className="animate-spin" />
+                                  ) : (
+                                    <Trash2 size={14} />
+                                  )}
+                                  Supprimer
+                                </button>
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -354,6 +587,18 @@ function Personnel() {
           </>
         )}
       </section>
+
+      {confirmationContent && (
+        <ConfirmDialog
+          confirmLabel={confirmationContent.confirmLabel}
+          description={confirmationContent.description}
+          isLoading={Boolean(actionId)}
+          onCancel={closeConfirmDialog}
+          onConfirm={confirmPendingAction}
+          title={confirmationContent.title}
+          tone={confirmationContent.tone}
+        />
+      )}
     </div>
   )
 }

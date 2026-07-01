@@ -107,7 +107,7 @@ function Containers() {
       await refreshContainers()
       setFeedback({
         type: 'success',
-        message: 'Conteneur saisi avec succes.',
+        message: 'Conteneur saisi avec succès.',
       })
     } catch (requestError) {
       setFeedback({
@@ -127,7 +127,7 @@ function Containers() {
       <header>
         <h2 className="mb-1 text-2xl font-bold text-marsa-royal">Conteneurs</h2>
         <p className="text-sm text-marsa-muted">
-          Saisie terrain et preparation du flux de detection YOLOv11.
+          Saisie terrain et préparation du flux de détection YOLOv11.
         </p>
       </header>
 
@@ -145,7 +145,7 @@ function Containers() {
         </div>
 
         {loading ? (
-          <Loader label="Chargement des operations..." />
+          <Loader label="Chargement des opérations..." />
         ) : (
           <form
             className="grid items-end gap-4 lg:grid-cols-[minmax(220px,0.8fr)_minmax(190px,0.6fr)_minmax(260px,1fr)_auto]"
@@ -153,7 +153,7 @@ function Containers() {
           >
             <div>
               <label className="form-label" htmlFor="container-operation">
-                Operation
+                Opération
               </label>
               <select
                 id="container-operation"
@@ -164,7 +164,7 @@ function Containers() {
                 required
                 disabled={operations.length === 0}
               >
-                <option value="">Selectionner une operation</option>
+                <option value="">Sélectionner une opération</option>
                 {operations.map((operation) => (
                   <option key={operation.id} value={operation.id}>
                     {operation.nom_operation} - {operation.shift}
@@ -223,7 +223,7 @@ function Containers() {
 
         {!loading && operations.length === 0 && (
           <p className="mt-4 rounded-md border border-dashed border-[#c0d5e8] bg-[#f5f9fd] p-3 text-sm text-marsa-muted">
-            Aucune operation en cours n'est disponible.
+            Aucune opération en cours n'est disponible.
           </p>
         )}
         </section>
@@ -231,7 +231,7 @@ function Containers() {
         <section className="page-card border-dashed">
           <h3 className="font-bold text-marsa-royal">Consultation uniquement</h3>
           <p className="mt-1 text-sm text-marsa-muted">
-            Votre role permet la consultation, mais pas cette action.
+            Votre rôle permet la consultation, mais pas cette action.
           </p>
         </section>
       )}
@@ -252,7 +252,7 @@ function Containers() {
           <Loader label="Chargement des conteneurs..." />
         ) : containers.length === 0 ? (
           <div className="px-6 py-12 text-center text-sm text-marsa-muted">
-            Aucun conteneur enregistre.
+            Aucun conteneur enregistré.
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -260,7 +260,7 @@ function Containers() {
               <thead>
                 <tr>
                   <th>Matricule ISO</th>
-                  <th>Operation</th>
+                  <th>Opération</th>
                   <th>Image</th>
                   <th>Confiance IA</th>
                   <th>Saisi par</th>
@@ -297,7 +297,7 @@ function Containers() {
                     <td>
                       {container.auteur_nom_complet ||
                         container.auteur_matricule ||
-                        'Non renseigne'}
+                        'Non renseigné'}
                     </td>
                     <td>{formatDateTime(container.created_at)}</td>
                   </tr>

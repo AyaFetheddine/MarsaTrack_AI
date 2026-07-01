@@ -63,9 +63,9 @@ export const roleLabels = {
   Responsable_Exploitation: 'Responsable Exploitation',
   Chef_Services: 'Chef Services',
   Chef_Escale: 'Chef Escale',
-  Chef_Equipe: 'Chef Equipe',
+  Chef_Equipe: 'Chef Équipe',
   Portiqueur: 'Portiqueur',
-  Equipage: 'Equipage',
+  Equipage: 'Équipage',
 }
 
 export const formatRoleLabel = (role) => roleLabels[role] || role || ''

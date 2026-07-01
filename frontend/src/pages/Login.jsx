@@ -32,7 +32,7 @@ function Login() {
     } catch (requestError) {
       setError(
         requestError.response?.data?.message ||
-          'Connexion impossible. Verifiez vos identifiants.',
+          'Connexion impossible. Vérifiez vos identifiants.',
       )
     } finally {
       setLoading(false)
@@ -53,7 +53,7 @@ function Login() {
             MarsaTrack AI
           </h1>
           <p className="text-sm text-marsa-muted">
-            Gestion operationnelle et suivi terrain
+            Gestion opérationnelle et suivi terrain
           </p>
         </div>
 
