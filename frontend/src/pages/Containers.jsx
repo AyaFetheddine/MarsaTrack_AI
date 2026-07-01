@@ -7,6 +7,7 @@ import {
 } from '../api/api'
 import FeedbackMessage from '../components/FeedbackMessage'
 import Loader from '../components/Loader'
+import useAutoClearMessage from '../hooks/useAutoClearMessage'
 import { getStoredRole } from '../utils/auth'
 
 const ISO_6346_REGEX = /^[A-Z]{4}\d{7}$/
@@ -35,6 +36,8 @@ function Containers() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [feedback, setFeedback] = useState(null)
+
+  useAutoClearMessage(feedback, setFeedback)
 
   const refreshContainers = async () => {
     const response = await containersApi.list()

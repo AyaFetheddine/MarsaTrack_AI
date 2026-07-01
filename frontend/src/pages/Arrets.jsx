@@ -8,6 +8,7 @@ import {
 import FeedbackMessage from '../components/FeedbackMessage'
 import Loader from '../components/Loader'
 import StatusBadge from '../components/StatusBadge'
+import useAutoClearMessage from '../hooks/useAutoClearMessage'
 import { getStoredRole } from '../utils/auth'
 
 const initialForm = {
@@ -34,6 +35,8 @@ function Arrets() {
   const [submitting, setSubmitting] = useState(false)
   const [closingId, setClosingId] = useState(null)
   const [feedback, setFeedback] = useState(null)
+
+  useAutoClearMessage(feedback, setFeedback)
 
   const refreshArrets = async () => {
     const response = await arretsApi.list()

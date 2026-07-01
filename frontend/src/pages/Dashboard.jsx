@@ -17,6 +17,7 @@ import {
 import FeedbackMessage from '../components/FeedbackMessage'
 import Loader from '../components/Loader'
 import StatCard from '../components/StatCard'
+import useAutoClearMessage from '../hooks/useAutoClearMessage'
 import { getStoredRole } from '../utils/auth'
 
 function Dashboard() {
@@ -46,6 +47,8 @@ function Dashboard() {
   const [personnelCount, setPersonnelCount] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  useAutoClearMessage(error, setError, '')
 
   useEffect(() => {
     const loadDashboard = async () => {

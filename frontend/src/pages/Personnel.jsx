@@ -1,9 +1,10 @@
-import { LoaderCircle, UserPlus } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { LoaderCircle, Search, UserPlus } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { getApiErrorMessage, personnelApi } from '../api/api'
 import FeedbackMessage from '../components/FeedbackMessage'
 import Loader from '../components/Loader'
 import StatusBadge from '../components/StatusBadge'
+import useAutoClearMessage from '../hooks/useAutoClearMessage'
 import { getStoredRole } from '../utils/auth'
 
 const fonctions = [
@@ -34,6 +35,32 @@ function Personnel() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [feedback, setFeedback] = useState(null)
+  const [filters, setFilters] = useState({
+    search: '',
+    fonction: 'all',
+    disponibilite: 'all',
+  })
+
+  const filteredPersonnel = useMemo(() => {
+    const searchTerm = filters.search.trim().toLowerCase()
+
+    return personnel.filter((member) => {
+      const matchesSearch =
+        !searchTerm ||
+        member.nom_complet.toLowerCase().includes(searchTerm) ||
+        member.matricule.toLowerCase().includes(searchTerm)
+      const matchesFonction =
+        filters.fonction === 'all' || member.fonction === filters.fonction
+      const matchesDisponibilite =
+        filters.disponibilite === 'all' ||
+        member.disponibilite === filters.disponibilite
+
+      return matchesSearch && matchesFonction && matchesDisponibilite
+    })
+  }, [filters, personnel])
+
+  useAutoClearMessage(error, setError, '')
+  useAutoClearMessage(feedback, setFeedback)
 
   const refreshPersonnel = async () => {
     const response = await personnelApi.list()
@@ -62,6 +89,11 @@ function Personnel() {
   const handleChange = (event) => {
     const { name, value } = event.target
     setForm((current) => ({ ...current, [name]: value }))
+  }
+
+  const handleFilterChange = (event) => {
+    const { name, value } = event.target
+    setFilters((current) => ({ ...current, [name]: value }))
   }
 
   const handleSubmit = async (event) => {
@@ -208,7 +240,9 @@ function Personnel() {
         <div className="border-b border-marsa-border px-5 py-4 sm:px-6">
           <h3 className="font-bold text-marsa-royal">Personnel affectable</h3>
           <p className="mt-1 text-sm text-marsa-muted">
-            {loading ? 'Chargement en cours' : `${personnel.length} membre(s)`}
+            {loading
+              ? 'Chargement en cours'
+              : `${filteredPersonnel.length} resultat(s)`}
           </p>
         </div>
 
@@ -219,34 +253,105 @@ function Personnel() {
             Aucun personnel disponible pour l'instant.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="data-table min-w-[760px]">
-              <thead>
-                <tr>
-                  <th>Matricule</th>
-                  <th>Nom complet</th>
-                  <th>Fonction</th>
-                  <th>Disponibilite</th>
-                </tr>
-              </thead>
-              <tbody>
-                {personnel.map((member) => (
-                  <tr key={member.id}>
-                    <td className="font-semibold text-marsa-text">
-                      {member.matricule}
-                    </td>
-                    <td>{member.nom_complet}</td>
-                    <td>
-                      <StatusBadge value={member.fonction} />
-                    </td>
-                    <td>
-                      <StatusBadge value={member.disponibilite} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <div className="grid gap-3 border-b border-marsa-border bg-white px-5 py-4 sm:px-6 lg:grid-cols-[minmax(240px,1fr)_220px_220px]">
+              <div>
+                <label className="form-label" htmlFor="personnel-search">
+                  Recherche
+                </label>
+                <div className="relative">
+                  <Search
+                    size={17}
+                    className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#7f9db9]"
+                    aria-hidden="true"
+                  />
+                  <input
+                    id="personnel-search"
+                    name="search"
+                    value={filters.search}
+                    onChange={handleFilterChange}
+                    className="form-control pl-10"
+                    placeholder="Rechercher par nom ou matricule..."
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label" htmlFor="filter-fonction">
+                  Fonction
+                </label>
+                <select
+                  id="filter-fonction"
+                  name="fonction"
+                  value={filters.fonction}
+                  onChange={handleFilterChange}
+                  className="form-control"
+                >
+                  <option value="all">Toutes les fonctions</option>
+                  {fonctions.map((fonction) => (
+                    <option key={fonction} value={fonction}>
+                      {fonction}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="form-label" htmlFor="filter-disponibilite">
+                  Disponibilite
+                </label>
+                <select
+                  id="filter-disponibilite"
+                  name="disponibilite"
+                  value={filters.disponibilite}
+                  onChange={handleFilterChange}
+                  className="form-control"
+                >
+                  <option value="all">Toutes</option>
+                  {disponibilites.map((disponibilite) => (
+                    <option key={disponibilite} value={disponibilite}>
+                      {disponibilite}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {filteredPersonnel.length === 0 ? (
+              <div className="px-6 py-12 text-center text-sm text-marsa-muted">
+                Aucun personnel ne correspond a votre recherche.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="data-table min-w-[760px]">
+                  <thead>
+                    <tr>
+                      <th>Matricule</th>
+                      <th>Nom complet</th>
+                      <th>Fonction</th>
+                      <th>Disponibilite</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredPersonnel.map((member) => (
+                      <tr key={member.id}>
+                        <td className="font-semibold text-marsa-text">
+                          {member.matricule}
+                        </td>
+                        <td>{member.nom_complet}</td>
+                        <td>
+                          <StatusBadge value={member.fonction} />
+                        </td>
+                        <td>
+                          <StatusBadge value={member.disponibilite} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
       </section>
     </div>

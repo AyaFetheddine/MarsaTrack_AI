@@ -1,5 +1,5 @@
-import { ClipboardCheck, LoaderCircle } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { ClipboardCheck, LoaderCircle, Search, X } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   getApiErrorMessage,
   operationsApi,
@@ -8,6 +8,7 @@ import {
 import FeedbackMessage from '../components/FeedbackMessage'
 import Loader from '../components/Loader'
 import StatusBadge from '../components/StatusBadge'
+import useAutoClearMessage from '../hooks/useAutoClearMessage'
 import { getStoredRole } from '../utils/auth'
 
 const initialForm = {
@@ -17,6 +18,18 @@ const initialForm = {
   vacation: 'Vacation 1',
   equipe: [],
 }
+
+const fonctions = [
+  'Portiqueur',
+  'Equipage',
+  'Conducteur',
+  'Pointeur',
+  'Agent_Terrain',
+  'Sous_Traitant',
+  'Autre',
+]
+
+const disponibilites = ['disponible', 'affecte', 'indisponible']
 
 const formatDate = (value) => {
   if (!value) return '-'
@@ -44,6 +57,38 @@ function Operations() {
   const [closingId, setClosingId] = useState(null)
   const [pageError, setPageError] = useState('')
   const [feedback, setFeedback] = useState(null)
+  const [personnelFilters, setPersonnelFilters] = useState({
+    search: '',
+    fonction: 'all',
+    disponibilite: 'disponible',
+  })
+
+  useAutoClearMessage(pageError, setPageError, '')
+  useAutoClearMessage(feedback, setFeedback)
+
+  const selectedPersonnel = useMemo(
+    () => personnel.filter((member) => form.equipe.includes(member.id)),
+    [form.equipe, personnel],
+  )
+
+  const filteredPersonnel = useMemo(() => {
+    const searchTerm = personnelFilters.search.trim().toLowerCase()
+
+    return personnel.filter((member) => {
+      const matchesSearch =
+        !searchTerm ||
+        member.nom_complet.toLowerCase().includes(searchTerm) ||
+        member.matricule.toLowerCase().includes(searchTerm)
+      const matchesFonction =
+        personnelFilters.fonction === 'all' ||
+        member.fonction === personnelFilters.fonction
+      const matchesDisponibilite =
+        personnelFilters.disponibilite === 'all' ||
+        member.disponibilite === personnelFilters.disponibilite
+
+      return matchesSearch && matchesFonction && matchesDisponibilite
+    })
+  }, [personnel, personnelFilters])
 
   const refreshOperations = async () => {
     const response = await operationsApi.list()
@@ -55,9 +100,7 @@ function Operations() {
       try {
         const [operationsResponse, personnelResponse] = await Promise.all([
           operationsApi.list(),
-          canCreateOperation
-            ? personnelApi.list({ disponibilite: 'disponible' })
-            : Promise.resolve(null),
+          canCreateOperation ? personnelApi.list() : Promise.resolve(null),
         ])
 
         setOperations(operationsResponse.data.data || [])
@@ -83,12 +126,30 @@ function Operations() {
   }
 
   const toggleMember = (userId) => {
+    const member = personnel.find((person) => person.id === userId)
+
+    if (member && member.disponibilite !== 'disponible') {
+      return
+    }
+
     setForm((current) => ({
       ...current,
       equipe: current.equipe.includes(userId)
         ? current.equipe.filter((id) => id !== userId)
         : [...current.equipe, userId],
     }))
+  }
+
+  const removeMember = (userId) => {
+    setForm((current) => ({
+      ...current,
+      equipe: current.equipe.filter((id) => id !== userId),
+    }))
+  }
+
+  const handlePersonnelFilterChange = (event) => {
+    const { name, value } = event.target
+    setPersonnelFilters((current) => ({ ...current, [name]: value }))
   }
 
   const handleSubmit = async (event) => {
@@ -146,7 +207,7 @@ function Operations() {
       <header>
         <h2 className="mb-1 text-2xl font-bold text-marsa-royal">Operations</h2>
         <p className="text-sm text-marsa-muted">
-          Creation, affectation des equipes et suivi des operations portuaires.
+          Creation, affectation du personnel et suivi des operations portuaires.
         </p>
       </header>
 
@@ -237,28 +298,143 @@ function Operations() {
                 Aucun personnel disponible pour l'instant.
               </div>
             ) : (
-              <div className="grid max-h-52 gap-2 overflow-y-auto rounded-md border border-marsa-border bg-[#f8fbff] p-3 sm:grid-cols-2 xl:grid-cols-3">
-                {personnel.map((member) => (
-                  <label
-                    key={member.id}
-                    className="flex cursor-pointer items-center gap-3 rounded-md border border-transparent bg-white px-3 py-2.5 text-sm transition hover:border-[#c8d8e8]"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={form.equipe.includes(member.id)}
-                      onChange={() => toggleMember(member.id)}
-                      className="h-4 w-4 accent-marsa-royal"
-                    />
-                    <span className="min-w-0">
-                      <span className="block truncate font-semibold text-marsa-text">
-                        {member.nom_complet}
-                      </span>
-                      <span className="text-xs text-marsa-muted">
-                        {member.matricule} - {member.fonction} - {member.disponibilite}
-                      </span>
-                    </span>
-                  </label>
-                ))}
+              <div className="space-y-4 rounded-md border border-marsa-border bg-[#f8fbff] p-3">
+                <div>
+                  <p className="mb-2 text-sm font-bold text-marsa-royal">
+                    Personnel selectionne
+                  </p>
+                  {selectedPersonnel.length === 0 ? (
+                    <p className="rounded-md border border-dashed border-[#c0d5e8] bg-white px-3 py-2 text-sm text-marsa-muted">
+                      Votre selection est vide.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedPersonnel.map((member) => (
+                        <span
+                          key={member.id}
+                          className="inline-flex max-w-full items-center gap-2 rounded-full border border-[#c8d8e8] bg-white px-3 py-1.5 text-xs font-semibold text-marsa-text"
+                        >
+                          <span className="truncate">
+                            {member.nom_complet} - {member.matricule} - {member.fonction}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeMember(member.id)}
+                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-marsa-muted transition hover:bg-[#e8f1fb] hover:text-marsa-royal"
+                            aria-label={`Retirer ${member.nom_complet}`}
+                            title="Retirer"
+                          >
+                            <X size={13} aria-hidden="true" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid gap-3 lg:grid-cols-[minmax(240px,1fr)_200px_200px]">
+                  <div>
+                    <label className="form-label" htmlFor="operation-personnel-search">
+                      Recherche
+                    </label>
+                    <div className="relative">
+                      <Search
+                        size={17}
+                        className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#7f9db9]"
+                        aria-hidden="true"
+                      />
+                      <input
+                        id="operation-personnel-search"
+                        name="search"
+                        value={personnelFilters.search}
+                        onChange={handlePersonnelFilterChange}
+                        className="form-control pl-10"
+                        placeholder="Rechercher personnel..."
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="form-label" htmlFor="operation-filter-fonction">
+                      Fonction
+                    </label>
+                    <select
+                      id="operation-filter-fonction"
+                      name="fonction"
+                      value={personnelFilters.fonction}
+                      onChange={handlePersonnelFilterChange}
+                      className="form-control"
+                    >
+                      <option value="all">Toutes les fonctions</option>
+                      {fonctions.map((fonction) => (
+                        <option key={fonction} value={fonction}>
+                          {fonction}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="form-label" htmlFor="operation-filter-disponibilite">
+                      Disponibilite
+                    </label>
+                    <select
+                      id="operation-filter-disponibilite"
+                      name="disponibilite"
+                      value={personnelFilters.disponibilite}
+                      onChange={handlePersonnelFilterChange}
+                      className="form-control"
+                    >
+                      <option value="all">Toutes</option>
+                      {disponibilites.map((disponibilite) => (
+                        <option key={disponibilite} value={disponibilite}>
+                          {disponibilite}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {filteredPersonnel.length === 0 ? (
+                  <div className="rounded-md border border-dashed border-[#c0d5e8] bg-white px-3 py-4 text-center text-sm text-marsa-muted">
+                    {personnelFilters.disponibilite === 'disponible'
+                      ? 'Aucun personnel disponible pour l\'instant.'
+                      : 'Aucun personnel ne correspond a votre recherche.'}
+                  </div>
+                ) : (
+                  <div className="grid max-h-64 gap-2 overflow-y-auto pr-1 sm:grid-cols-2 xl:grid-cols-3">
+                    {filteredPersonnel.map((member) => {
+                      const isSelectable = member.disponibilite === 'disponible'
+
+                      return (
+                        <label
+                          key={member.id}
+                          className={`flex items-center gap-3 rounded-md border border-transparent bg-white px-3 py-2.5 text-sm transition ${
+                            isSelectable
+                              ? 'cursor-pointer hover:border-[#c8d8e8]'
+                              : 'cursor-not-allowed opacity-60'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={form.equipe.includes(member.id)}
+                            onChange={() => toggleMember(member.id)}
+                            disabled={!isSelectable}
+                            className="h-4 w-4 accent-marsa-royal disabled:cursor-not-allowed"
+                          />
+                          <span className="min-w-0">
+                            <span className="block truncate font-semibold text-marsa-text">
+                              {member.nom_complet}
+                            </span>
+                            <span className="text-xs text-marsa-muted">
+                              {member.matricule} - {member.fonction} - {member.disponibilite}
+                            </span>
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </fieldset>
