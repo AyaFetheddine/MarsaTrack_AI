@@ -2,9 +2,11 @@ import {
   Boxes,
   CircleCheck,
   ClipboardList,
+  Download,
   HardHat,
   OctagonAlert,
   Timer,
+  Upload,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import {
@@ -90,6 +92,13 @@ function Dashboard() {
   const activeArrets = canViewArrets
     ? arrets.filter((arret) => arret.statut === 'en cours').length
     : '-'
+  const importContainers = canViewContainers
+    ? containers.filter((container) => (container.mouvement || 'IMPORT') === 'IMPORT')
+        .length
+    : '-'
+  const exportContainers = canViewContainers
+    ? containers.filter((container) => container.mouvement === 'EXPORT').length
+    : '-'
 
   const stats = [
     {
@@ -121,6 +130,18 @@ function Dashboard() {
       value: canViewContainers ? containers.length : '-',
       icon: Boxes,
       accentClass: 'bg-[#eef2f6] text-[#4a6582]',
+    },
+    {
+      title: 'Conteneurs import',
+      value: importContainers,
+      icon: Download,
+      accentClass: 'bg-[#e8f4fd] text-[#0055b3]',
+    },
+    {
+      title: 'Conteneurs export',
+      value: exportContainers,
+      icon: Upload,
+      accentClass: 'bg-[#fff6df] text-[#9c6500]',
     },
     {
       title: 'Personnel disponible',

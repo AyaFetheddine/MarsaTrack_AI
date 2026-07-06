@@ -2,6 +2,7 @@ const { pool } = require('../config/db');
 
 // ISO 6346 simplifie : exactement 4 lettres majuscules puis 7 chiffres.
 const ISO_6346_REGEX = /^[A-Z]{4}\d{7}$/;
+const ALLOWED_MOUVEMENTS = ['IMPORT', 'EXPORT'];
 
 /**
  * Controleur : saisirContainer
@@ -12,6 +13,7 @@ const ISO_6346_REGEX = /^[A-Z]{4}\d{7}$/;
  */
 const saisirContainer = async (req, res) => {
   const { operation_id, matricule_iso, image_url } = req.body;
+  const mouvement = req.body.mouvement || 'IMPORT';
   const ai_confidence = null;
   const createdBy = req.user.id;
 
@@ -38,6 +40,13 @@ const saisirContainer = async (req, res) => {
     });
   }
 
+  if (!ALLOWED_MOUVEMENTS.includes(mouvement)) {
+    return res.status(400).json({
+      status  : 'error',
+      message : 'Le mouvement doit etre IMPORT ou EXPORT.',
+    });
+  }
+
   try {
     // Verification que l'operation referencee existe bien
     const [opRows] = await pool.execute(
@@ -57,11 +66,12 @@ const saisirContainer = async (req, res) => {
          operation_id,
          matricule_iso,
          image_url,
+         mouvement,
          ai_confidence,
          created_by
        )
-       VALUES (?, ?, ?, ?, ?)`,
-      [operation_id, matricule_iso, image_url, ai_confidence, createdBy]
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [operation_id, matricule_iso, image_url, mouvement, ai_confidence, createdBy]
     );
 
     const [createdRows] = await pool.execute(
@@ -77,6 +87,7 @@ const saisirContainer = async (req, res) => {
         operation_id  : Number(operation_id),
         matricule_iso,
         image_url,
+        mouvement,
         ai_confidence,
         created_by    : createdBy,
         created_at    : createdRows[0].created_at,
@@ -106,6 +117,7 @@ const getContainers = async (req, res) => {
          c.operation_id,
          c.matricule_iso,
          c.image_url,
+         c.mouvement,
          c.ai_confidence,
          c.created_at,
          o.nom_operation,

@@ -8,6 +8,7 @@ import {
 import CustomSelect from '../components/CustomSelect'
 import FeedbackMessage from '../components/FeedbackMessage'
 import Loader from '../components/Loader'
+import StatusBadge from '../components/StatusBadge'
 import useAutoClearMessage from '../hooks/useAutoClearMessage'
 import { getStoredRole } from '../utils/auth'
 
@@ -15,9 +16,15 @@ const ISO_6346_REGEX = /^[A-Z]{4}\d{7}$/
 
 const initialForm = {
   operation_id: '',
+  mouvement: 'IMPORT',
   matricule_iso: '',
   image_url: '',
 }
+
+const mouvementOptions = [
+  { value: 'IMPORT', label: 'Import' },
+  { value: 'EXPORT', label: 'Export' },
+]
 
 const formatDateTime = (value) => {
   if (!value) return '-'
@@ -115,6 +122,7 @@ function Containers() {
         operation_id: Number(form.operation_id),
         matricule_iso: form.matricule_iso,
         image_url: form.image_url,
+        mouvement: form.mouvement,
       })
       setForm(initialForm)
       await refreshContainers()
@@ -161,7 +169,7 @@ function Containers() {
           <Loader label="Chargement des opérations..." />
         ) : (
           <form
-            className="grid items-end gap-4 lg:grid-cols-[minmax(220px,0.8fr)_minmax(190px,0.6fr)_minmax(260px,1fr)_auto]"
+            className="grid items-end gap-4 xl:grid-cols-[minmax(220px,0.8fr)_minmax(150px,0.45fr)_minmax(190px,0.55fr)_minmax(260px,1fr)_auto]"
             onSubmit={handleSubmit}
           >
             <CustomSelect
@@ -174,6 +182,13 @@ function Containers() {
               }))}
               placeholder={'S\u00e9lectionner une op\u00e9ration'}
               disabled={operations.length === 0}
+            />
+
+            <CustomSelect
+              label="Mouvement"
+              value={form.mouvement}
+              onChange={(value) => handleCustomChange('mouvement', value)}
+              options={mouvementOptions}
             />
 
             <div>
@@ -259,10 +274,11 @@ function Containers() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="data-table min-w-[980px]">
+            <table className="data-table min-w-[1080px]">
               <thead>
                 <tr>
                   <th>Matricule ISO</th>
+                  <th>Mouvement</th>
                   <th>Opération</th>
                   <th>Image</th>
                   <th>Confiance IA</th>
@@ -275,6 +291,9 @@ function Containers() {
                   <tr key={container.id}>
                     <td className="font-bold text-marsa-royal">
                       {container.matricule_iso}
+                    </td>
+                    <td>
+                      <StatusBadge value={container.mouvement || 'IMPORT'} />
                     </td>
                     <td>{container.nom_operation}</td>
                     <td>

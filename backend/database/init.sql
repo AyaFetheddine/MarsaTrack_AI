@@ -204,6 +204,8 @@ CREATE TABLE IF NOT EXISTS container (
                     COMMENT 'Norme ISO 6346 : 4 lettres + 7 chiffres (ex: MSCU1234567). Validation regex côté API.',
   image_url         VARCHAR(500)   NOT NULL
                     COMMENT 'Chemin relatif ou URL S3 de la photo source',
+  mouvement         ENUM('IMPORT', 'EXPORT') NOT NULL DEFAULT 'IMPORT'
+                    COMMENT 'IMPORT : navire vers terminal, EXPORT : terminal vers navire',
   ai_confidence     FLOAT          NULL
                     COMMENT 'Score de confiance YOLOv11 (0.0 à 1.0)',
   created_by        INT UNSIGNED   NULL
