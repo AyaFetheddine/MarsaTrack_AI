@@ -55,7 +55,12 @@ function Dashboard() {
   useEffect(() => {
     const loadDashboard = async () => {
       try {
-        const [operationsResponse, arretsResponse, containersResponse, personnelResponse] = await Promise.all([
+        const [
+          operationsResponse,
+          arretsResponse,
+          containersResponse,
+          personnelResponse,
+        ] = await Promise.all([
           operationsApi.list(),
           canViewArrets ? arretsApi.list() : Promise.resolve(null),
           canViewContainers ? containersApi.list() : Promise.resolve(null),
@@ -66,7 +71,11 @@ function Dashboard() {
         setArrets(arretsResponse?.data.data || [])
         setContainers(containersResponse?.data.data || [])
         setPersonnelCount(
-          personnelResponse ? (personnelResponse.data.data || []).length : null,
+          personnelResponse
+            ? (personnelResponse.data.data || []).filter(
+                (person) => person.disponibilite === 'disponible',
+              ).length
+            : null,
         )
       } catch (requestError) {
         setError(
@@ -93,8 +102,9 @@ function Dashboard() {
     ? arrets.filter((arret) => arret.statut === 'en cours').length
     : '-'
   const importContainers = canViewContainers
-    ? containers.filter((container) => (container.mouvement || 'IMPORT') === 'IMPORT')
-        .length
+    ? containers.filter(
+        (container) => (container.mouvement || 'IMPORT') === 'IMPORT',
+      ).length
     : '-'
   const exportContainers = canViewContainers
     ? containers.filter((container) => container.mouvement === 'EXPORT').length
@@ -175,16 +185,6 @@ function Dashboard() {
           ))}
         </section>
       )}
-
-      <section className="page-card min-h-44">
-        <h3 className="text-base font-bold text-marsa-royal">
-          Synchronisation métier
-        </h3>
-        <p className="mt-1 text-sm text-marsa-muted">
-          Tous les indicateurs affichés sont maintenant calculés depuis les
-          données du backend MarsaTrack AI.
-        </p>
-      </section>
     </div>
   )
 }
