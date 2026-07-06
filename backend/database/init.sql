@@ -169,12 +169,12 @@ CREATE TABLE IF NOT EXISTS operation_personnel (
 CREATE TABLE IF NOT EXISTS arrets_travail (
   id           INT UNSIGNED  NOT NULL AUTO_INCREMENT,
   operation_id INT UNSIGNED  NOT NULL,
-  cause        ENUM(
-                 'panne grue',
-                 'manque de matériel',
-                 'attente camion'
-               )             NOT NULL
-               COMMENT 'Qualification précise de la cause de l''arrêt',
+  cause        VARCHAR(255)  NOT NULL
+               COMMENT 'Cause compatible historique ou code + libellé de l''arrêt',
+  code_arret   VARCHAR(20)   NULL
+               COMMENT 'Code métier Marsa Maroc de l''arrêt',
+  libelle_arret VARCHAR(255) NULL
+               COMMENT 'Libellé métier Marsa Maroc de l''arrêt',
   heure_debut  DATETIME      NOT NULL COMMENT 'Horodatage de début de l''arrêt',
   heure_fin    DATETIME      NULL     COMMENT 'NULL si l''arrêt est toujours en cours',
   declared_by  INT UNSIGNED  NULL

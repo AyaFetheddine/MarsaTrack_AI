@@ -11,9 +11,20 @@ import StatusBadge from '../components/StatusBadge'
 import useAutoClearMessage from '../hooks/useAutoClearMessage'
 import { getStoredRole } from '../utils/auth'
 
+const arretOptions = [
+  { code: '1', libelle: 'Mouvements des engins de levage' },
+  { code: '3', libelle: 'Panne des engins de levage' },
+  { code: '10', libelle: 'Arrêt non justifié du grutier' },
+  { code: '11', libelle: 'Grève du personnel Marsa Maroc + Sous-traitant' },
+  { code: '12', libelle: 'Changement accessoires de manutention' },
+  { code: '13', libelle: 'Panne des équipements chargeur/réceptionnaire' },
+  { code: '78', libelle: 'Durée import' },
+  { code: '79', libelle: 'Durée export' },
+]
+
 const initialForm = {
   operation_id: '',
-  cause: 'panne grue',
+  code_arret: '',
 }
 
 const formatDateTime = (value) => {
@@ -83,10 +94,24 @@ function Arrets() {
     setSubmitting(true)
     setFeedback(null)
 
+    const selectedArret = arretOptions.find(
+      (option) => option.code === form.code_arret,
+    )
+
+    if (!selectedArret) {
+      setSubmitting(false)
+      setFeedback({
+        type: 'error',
+        message: 'Sélectionnez un type d\'arrêt valide.',
+      })
+      return
+    }
+
     try {
       await arretsApi.create({
         operation_id: Number(form.operation_id),
-        cause: form.cause,
+        code_arret: selectedArret.code,
+        libelle_arret: selectedArret.libelle,
       })
       setForm(initialForm)
       await refreshArrets()
@@ -148,79 +173,84 @@ function Arrets() {
 
       {canManageArrets ? (
         <section className="page-card">
-        <div className="mb-5">
-          <h3 className="font-bold text-marsa-royal">Déclarer un arrêt</h3>
-          <p className="mt-1 text-sm text-marsa-muted">
-            Associez l'incident à une opération en cours.
-          </p>
-        </div>
+          <div className="mb-5">
+            <h3 className="font-bold text-marsa-royal">Déclarer un arrêt</h3>
+            <p className="mt-1 text-sm text-marsa-muted">
+              Sélectionnez le type d'arrêt d'exploitation constaté sur le
+              terrain.
+            </p>
+          </div>
 
-        {loading ? (
-          <Loader label="Chargement des opérations..." />
-        ) : (
-          <form
-            className="grid items-end gap-4 md:grid-cols-[minmax(0,1fr)_minmax(220px,0.7fr)_auto]"
-            onSubmit={handleSubmit}
-          >
-            <div>
-              <label className="form-label" htmlFor="arret-operation">
-                Opération
-              </label>
-              <select
-                id="arret-operation"
-                name="operation_id"
-                value={form.operation_id}
-                onChange={handleChange}
-                className="form-control"
-                required
-                disabled={operations.length === 0}
-              >
-                <option value="">Sélectionner une opération</option>
-                {operations.map((operation) => (
-                  <option key={operation.id} value={operation.id}>
-                    {operation.nom_operation} - {operation.shift}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="form-label" htmlFor="cause">
-                Cause
-              </label>
-              <select
-                id="cause"
-                name="cause"
-                value={form.cause}
-                onChange={handleChange}
-                className="form-control"
-              >
-                <option value="panne grue">Panne grue</option>
-                <option value="manque de matériel">Manque de matériel</option>
-                <option value="attente camion">Attente camion</option>
-              </select>
-            </div>
-
-            <button
-              type="submit"
-              className="primary-button"
-              disabled={submitting || operations.length === 0}
+          {loading ? (
+            <Loader label="Chargement des opérations..." />
+          ) : (
+            <form
+              className="grid items-end gap-4 md:grid-cols-[minmax(0,1fr)_minmax(260px,0.9fr)_auto]"
+              onSubmit={handleSubmit}
             >
-              {submitting ? (
-                <LoaderCircle size={18} className="animate-spin" />
-              ) : (
-                <OctagonAlert size={18} />
-              )}
-              {submitting ? 'Déclaration...' : 'Déclarer'}
-            </button>
-          </form>
-        )}
+              <div>
+                <label className="form-label" htmlFor="arret-operation">
+                  Opération
+                </label>
+                <select
+                  id="arret-operation"
+                  name="operation_id"
+                  value={form.operation_id}
+                  onChange={handleChange}
+                  className="form-control"
+                  required
+                  disabled={operations.length === 0}
+                >
+                  <option value="">Sélectionner une opération</option>
+                  {operations.map((operation) => (
+                    <option key={operation.id} value={operation.id}>
+                      {operation.nom_operation} - {operation.shift}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-        {!loading && operations.length === 0 && (
-          <p className="mt-4 rounded-md border border-dashed border-[#c0d5e8] bg-[#f5f9fd] p-3 text-sm text-marsa-muted">
-            Aucune opération en cours n'est disponible.
-          </p>
-        )}
+              <div>
+                <label className="form-label" htmlFor="code_arret">
+                  Type d'arrêt
+                </label>
+                <select
+                  id="code_arret"
+                  name="code_arret"
+                  value={form.code_arret}
+                  onChange={handleChange}
+                  className="form-control"
+                  required
+                >
+                  <option value="">Sélectionner un code arrêt</option>
+                  {arretOptions.map((option) => (
+                    <option key={option.code} value={option.code}>
+                      {option.code} - {option.libelle}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                type="submit"
+                className="primary-button"
+                disabled={submitting || operations.length === 0}
+              >
+                {submitting ? (
+                  <LoaderCircle size={18} className="animate-spin" />
+                ) : (
+                  <OctagonAlert size={18} />
+                )}
+                {submitting ? 'Déclaration...' : 'Déclarer'}
+              </button>
+            </form>
+          )}
+
+          {!loading && operations.length === 0 && (
+            <p className="mt-4 rounded-md border border-dashed border-[#c0d5e8] bg-[#f5f9fd] p-3 text-sm text-marsa-muted">
+              Aucune opération en cours n'est disponible.
+            </p>
+          )}
         </section>
       ) : (
         <section className="page-card border-dashed">
@@ -247,11 +277,12 @@ function Arrets() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="data-table min-w-[1080px]">
+            <table className="data-table min-w-[1180px]">
               <thead>
                 <tr>
                   <th>Opération</th>
-                  <th>Cause</th>
+                  <th>Code</th>
+                  <th>Libellé arrêt</th>
                   <th>Début</th>
                   <th>Fin</th>
                   <th>Statut</th>
@@ -265,7 +296,8 @@ function Arrets() {
                     <td className="font-semibold text-marsa-text">
                       {arret.nom_operation}
                     </td>
-                    <td>{arret.cause}</td>
+                    <td>{arret.code_arret || '-'}</td>
+                    <td>{arret.libelle_arret || arret.cause || '-'}</td>
                     <td>{formatDateTime(arret.heure_debut)}</td>
                     <td>{formatDateTime(arret.heure_fin)}</td>
                     <td>
