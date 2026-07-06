@@ -206,4 +206,51 @@ const getArrets = async (req, res) => {
   }
 };
 
-module.exports = { declarerArret, cloturerArret, getArrets };
+/**
+ * Controleur : deleteArret
+ * Route : DELETE /api/arrets/:id
+ *
+ * Supprime physiquement un arret de travail de test.
+ */
+const deleteArret = async (req, res) => {
+  const { id } = req.params;
+
+  if (!id || isNaN(Number(id))) {
+    return res.status(400).json({
+      status: 'error',
+      message: 'L\'identifiant de l\'arret doit etre un nombre entier valide.',
+    });
+  }
+
+  try {
+    const [rows] = await pool.execute(
+      'SELECT id FROM arrets_travail WHERE id = ?',
+      [id],
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Arret introuvable.',
+      });
+    }
+
+    await pool.execute('DELETE FROM arrets_travail WHERE id = ?', [id]);
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Arret supprime avec succes.',
+      data: {
+        id: Number(id),
+      },
+    });
+  } catch (error) {
+    console.error('[arretController] Erreur deleteArret :', error.message);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Erreur interne du serveur lors de la suppression de l\'arret.',
+    });
+  }
+};
+
+module.exports = { declarerArret, cloturerArret, getArrets, deleteArret };

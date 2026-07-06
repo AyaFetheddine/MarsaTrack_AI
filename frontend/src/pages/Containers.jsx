@@ -5,6 +5,7 @@ import {
   getApiErrorMessage,
   operationsApi,
 } from '../api/api'
+import CustomSelect from '../components/CustomSelect'
 import FeedbackMessage from '../components/FeedbackMessage'
 import Loader from '../components/Loader'
 import useAutoClearMessage from '../hooks/useAutoClearMessage'
@@ -82,9 +83,21 @@ function Containers() {
     }))
   }
 
+  const handleCustomChange = (name, value) => {
+    setForm((current) => ({ ...current, [name]: value }))
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     setFeedback(null)
+
+    if (!form.operation_id) {
+      setFeedback({
+        type: 'error',
+        message: 'Selectionnez une operation.',
+      })
+      return
+    }
 
     if (!ISO_6346_REGEX.test(form.matricule_iso)) {
       setFeedback({
@@ -151,27 +164,17 @@ function Containers() {
             className="grid items-end gap-4 lg:grid-cols-[minmax(220px,0.8fr)_minmax(190px,0.6fr)_minmax(260px,1fr)_auto]"
             onSubmit={handleSubmit}
           >
-            <div>
-              <label className="form-label" htmlFor="container-operation">
-                Opération
-              </label>
-              <select
-                id="container-operation"
-                name="operation_id"
-                value={form.operation_id}
-                onChange={handleChange}
-                className="form-control"
-                required
-                disabled={operations.length === 0}
-              >
-                <option value="">Sélectionner une opération</option>
-                {operations.map((operation) => (
-                  <option key={operation.id} value={operation.id}>
-                    {operation.nom_operation} - {operation.shift}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <CustomSelect
+              label={'Op\u00e9ration'}
+              value={form.operation_id}
+              onChange={(value) => handleCustomChange('operation_id', value)}
+              options={operations.map((operation) => ({
+                value: String(operation.id),
+                label: `${operation.nom_operation} - ${operation.shift}`,
+              }))}
+              placeholder={'S\u00e9lectionner une op\u00e9ration'}
+              disabled={operations.length === 0}
+            />
 
             <div>
               <label className="form-label" htmlFor="matricule_iso">

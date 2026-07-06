@@ -1,6 +1,11 @@
 const express = require('express');
 
-const { declarerArret, cloturerArret, getArrets } = require('../controllers/arretController');
+const {
+  declarerArret,
+  cloturerArret,
+  deleteArret,
+  getArrets,
+} = require('../controllers/arretController');
 const { authenticateToken, authorizeRoles } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
@@ -45,6 +50,18 @@ router.put(
   authenticateToken,
   authorizeRoles('Admin', 'Chef_Equipe'),
   cloturerArret
+);
+
+/**
+ * DELETE /api/arrets/:id
+ * Supprime un arret de travail de test.
+ * Reserve au role : Admin.
+ */
+router.delete(
+  '/:id',
+  authenticateToken,
+  authorizeRoles('Admin'),
+  deleteArret
 );
 
 module.exports = router;

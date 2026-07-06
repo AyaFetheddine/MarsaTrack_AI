@@ -1,10 +1,12 @@
-import { LoaderCircle, OctagonAlert } from 'lucide-react'
+import { LoaderCircle, OctagonAlert, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import {
   arretsApi,
   getApiErrorMessage,
   operationsApi,
 } from '../api/api'
+import ConfirmDialog from '../components/ConfirmDialog'
+import CustomSelect from '../components/CustomSelect'
 import FeedbackMessage from '../components/FeedbackMessage'
 import Loader from '../components/Loader'
 import StatusBadge from '../components/StatusBadge'
@@ -21,6 +23,11 @@ const arretOptions = [
   { code: '78', libelle: 'Durée import' },
   { code: '79', libelle: 'Durée export' },
 ]
+
+const arretSelectOptions = arretOptions.map((option) => ({
+  value: option.code,
+  label: `${option.code} - ${option.libelle}`,
+}))
 
 const initialForm = {
   operation_id: '',
@@ -39,12 +46,15 @@ const formatDateTime = (value) => {
 function Arrets() {
   const role = getStoredRole()
   const canManageArrets = ['Admin', 'Chef_Equipe'].includes(role)
+  const canDeleteArret = role === 'Admin'
   const [operations, setOperations] = useState([])
   const [arrets, setArrets] = useState([])
   const [form, setForm] = useState(initialForm)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [closingId, setClosingId] = useState(null)
+  const [deletingId, setDeletingId] = useState(null)
+  const [pendingDeleteArret, setPendingDeleteArret] = useState(null)
   const [feedback, setFeedback] = useState(null)
 
   useAutoClearMessage(feedback, setFeedback)
@@ -84,8 +94,7 @@ function Arrets() {
     loadPage()
   }, [])
 
-  const handleChange = (event) => {
-    const { name, value } = event.target
+  const handleCustomChange = (name, value) => {
     setForm((current) => ({ ...current, [name]: value }))
   }
 
@@ -93,6 +102,15 @@ function Arrets() {
     event.preventDefault()
     setSubmitting(true)
     setFeedback(null)
+
+    if (!form.operation_id) {
+      setSubmitting(false)
+      setFeedback({
+        type: 'error',
+        message: 'Sélectionnez une opération.',
+      })
+      return
+    }
 
     const selectedArret = arretOptions.find(
       (option) => option.code === form.code_arret,
@@ -102,7 +120,7 @@ function Arrets() {
       setSubmitting(false)
       setFeedback({
         type: 'error',
-        message: 'Sélectionnez un type d\'arrêt valide.',
+        message: "Sélectionnez un type d'arrêt valide.",
       })
       return
     }
@@ -124,7 +142,7 @@ function Arrets() {
         type: 'error',
         message: getApiErrorMessage(
           requestError,
-          'Impossible de déclarer l\'arrêt de travail.',
+          "Impossible de déclarer l'arrêt de travail.",
         ),
       })
     } finally {
@@ -148,11 +166,47 @@ function Arrets() {
         type: 'error',
         message: getApiErrorMessage(
           requestError,
-          'Impossible de clôturer l\'arrêt de travail.',
+          "Impossible de clôturer l'arrêt de travail.",
         ),
       })
     } finally {
       setClosingId(null)
+    }
+  }
+
+  const requestDelete = (arret) => {
+    setPendingDeleteArret(arret)
+  }
+
+  const closeDeleteDialog = () => {
+    if (deletingId) return
+    setPendingDeleteArret(null)
+  }
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteArret) return
+
+    setDeletingId(pendingDeleteArret.id)
+    setFeedback(null)
+
+    try {
+      await arretsApi.remove(pendingDeleteArret.id)
+      await refreshArrets()
+      setFeedback({
+        type: 'success',
+        message: 'Arrêt supprimé avec succès.',
+      })
+    } catch (requestError) {
+      setFeedback({
+        type: 'error',
+        message: getApiErrorMessage(
+          requestError,
+          "Impossible de supprimer l'arrêt.",
+        ),
+      })
+    } finally {
+      setDeletingId(null)
+      setPendingDeleteArret(null)
     }
   }
 
@@ -188,48 +242,25 @@ function Arrets() {
               className="grid items-end gap-4 md:grid-cols-[minmax(0,1fr)_minmax(260px,0.9fr)_auto]"
               onSubmit={handleSubmit}
             >
-              <div>
-                <label className="form-label" htmlFor="arret-operation">
-                  Opération
-                </label>
-                <select
-                  id="arret-operation"
-                  name="operation_id"
-                  value={form.operation_id}
-                  onChange={handleChange}
-                  className="form-control"
-                  required
-                  disabled={operations.length === 0}
-                >
-                  <option value="">Sélectionner une opération</option>
-                  {operations.map((operation) => (
-                    <option key={operation.id} value={operation.id}>
-                      {operation.nom_operation} - {operation.shift}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <CustomSelect
+                label="Opération"
+                value={form.operation_id}
+                onChange={(value) => handleCustomChange('operation_id', value)}
+                options={operations.map((operation) => ({
+                  value: String(operation.id),
+                  label: `${operation.nom_operation} - ${operation.shift}`,
+                }))}
+                placeholder="Sélectionner une opération"
+                disabled={operations.length === 0}
+              />
 
-              <div>
-                <label className="form-label" htmlFor="code_arret">
-                  Type d'arrêt
-                </label>
-                <select
-                  id="code_arret"
-                  name="code_arret"
-                  value={form.code_arret}
-                  onChange={handleChange}
-                  className="form-control"
-                  required
-                >
-                  <option value="">Sélectionner un code arrêt</option>
-                  {arretOptions.map((option) => (
-                    <option key={option.code} value={option.code}>
-                      {option.code} - {option.libelle}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <CustomSelect
+                label="Type d'arrêt"
+                value={form.code_arret}
+                onChange={(value) => handleCustomChange('code_arret', value)}
+                options={arretSelectOptions}
+                placeholder="Sélectionner un code arrêt"
+              />
 
               <button
                 type="submit"
@@ -273,16 +304,16 @@ function Arrets() {
           <Loader label="Chargement des arrêts..." />
         ) : arrets.length === 0 ? (
           <div className="px-6 py-12 text-center text-sm text-marsa-muted">
-            Aucun arrêt de travail enregistré.
+            Aucun arrêt enregistré.
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="data-table min-w-[1180px]">
+            <table className="data-table min-w-[1100px]">
               <thead>
                 <tr>
                   <th>Opération</th>
                   <th>Code</th>
-                  <th>Libellé arrêt</th>
+                  <th>Libellé</th>
                   <th>Début</th>
                   <th>Fin</th>
                   <th>Statut</th>
@@ -294,7 +325,7 @@ function Arrets() {
                 {arrets.map((arret) => (
                   <tr key={arret.id}>
                     <td className="font-semibold text-marsa-text">
-                      {arret.nom_operation}
+                      {arret.nom_operation || '-'}
                     </td>
                     <td>{arret.code_arret || '-'}</td>
                     <td>{arret.libelle_arret || arret.cause || '-'}</td>
@@ -309,25 +340,45 @@ function Arrets() {
                         'Non renseigné'}
                     </td>
                     <td>
-                      {arret.statut === 'en cours' && canManageArrets ? (
-                        <button
-                          type="button"
-                          onClick={() => handleClose(arret.id)}
-                          disabled={closingId === arret.id}
-                          className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[#c8d8e8] px-3 text-xs font-bold text-marsa-royal transition hover:border-marsa-royal hover:bg-marsa-royal hover:text-white disabled:opacity-60"
-                        >
-                          {closingId === arret.id && (
-                            <LoaderCircle size={15} className="animate-spin" />
-                          )}
-                          {closingId === arret.id ? 'Clôture...' : 'Clôturer'}
-                        </button>
-                      ) : arret.statut === 'en cours' ? (
-                        <span className="text-xs text-marsa-muted">
-                          Consultation
-                        </span>
-                      ) : (
-                        <span className="text-xs text-marsa-muted">Terminé</span>
-                      )}
+                      <div className="flex flex-wrap gap-2">
+                        {arret.statut === 'en cours' && canManageArrets ? (
+                          <button
+                            type="button"
+                            onClick={() => handleClose(arret.id)}
+                            disabled={closingId === arret.id}
+                            className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[#c8d8e8] px-3 text-xs font-bold text-marsa-royal transition hover:border-marsa-royal hover:bg-marsa-royal hover:text-white disabled:opacity-60"
+                          >
+                            {closingId === arret.id && (
+                              <LoaderCircle size={15} className="animate-spin" />
+                            )}
+                            {closingId === arret.id ? 'Cloture...' : 'Cloturer'}
+                          </button>
+                        ) : arret.statut === 'en cours' ? (
+                          <span className="self-center text-xs text-marsa-muted">
+                            Consultation
+                          </span>
+                        ) : (
+                          <span className="self-center text-xs text-marsa-muted">
+                            Termine
+                          </span>
+                        )}
+
+                        {canDeleteArret && (
+                          <button
+                            type="button"
+                            onClick={() => requestDelete(arret)}
+                            disabled={deletingId === arret.id}
+                            className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[#fecaca] px-3 text-xs font-bold text-[#b91c1c] transition hover:border-[#b91c1c] hover:bg-[#fff1f2] disabled:opacity-60"
+                          >
+                            {deletingId === arret.id ? (
+                              <LoaderCircle size={15} className="animate-spin" />
+                            ) : (
+                              <Trash2 size={15} />
+                            )}
+                            Supprimer
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -336,6 +387,18 @@ function Arrets() {
           </div>
         )}
       </section>
+
+      {pendingDeleteArret && (
+        <ConfirmDialog
+          title="Supprimer cet arrêt ?"
+          description="Cette action est utile pour nettoyer les données de test, mais elle est irréversible."
+          confirmLabel="Supprimer"
+          tone="danger"
+          isLoading={deletingId === pendingDeleteArret.id}
+          onCancel={closeDeleteDialog}
+          onConfirm={confirmDelete}
+        />
+      )}
     </div>
   )
 }

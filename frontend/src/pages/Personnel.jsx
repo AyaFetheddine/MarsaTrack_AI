@@ -10,6 +10,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getApiErrorMessage, personnelApi } from '../api/api'
 import ConfirmDialog from '../components/ConfirmDialog'
+import CustomSelect from '../components/CustomSelect'
 import Loader from '../components/Loader'
 import StatusBadge from '../components/StatusBadge'
 import ToastMessage from '../components/ToastMessage'
@@ -43,6 +44,26 @@ const disponibiliteLabels = {
 
 const formatFonction = (value) => fonctionLabels[value] || value
 const formatDisponibilite = (value) => disponibiliteLabels[value] || value
+
+const fonctionOptions = fonctions.map((fonction) => ({
+  value: fonction,
+  label: formatFonction(fonction),
+}))
+
+const disponibiliteOptions = disponibilites.map((disponibilite) => ({
+  value: disponibilite,
+  label: formatDisponibilite(disponibilite),
+}))
+
+const fonctionFilterOptions = [
+  { value: 'all', label: 'Toutes les fonctions' },
+  ...fonctionOptions,
+]
+
+const disponibiliteFilterOptions = [
+  { value: 'all', label: 'Toutes' },
+  ...disponibiliteOptions,
+]
 
 const initialForm = {
   matricule: '',
@@ -124,6 +145,14 @@ function Personnel() {
 
   const handleFilterChange = (event) => {
     const { name, value } = event.target
+    setFilters((current) => ({ ...current, [name]: value }))
+  }
+
+  const handleCustomFormChange = (name, value) => {
+    setForm((current) => ({ ...current, [name]: value }))
+  }
+
+  const handleCustomFilterChange = (name, value) => {
     setFilters((current) => ({ ...current, [name]: value }))
   }
 
@@ -344,44 +373,18 @@ function Personnel() {
                 required
               />
             </div>
-
-            <div>
-              <label className="form-label" htmlFor="fonction">
-                Fonction
-              </label>
-              <select
-                id="fonction"
-                name="fonction"
-                value={form.fonction}
-                onChange={handleChange}
-                className="form-control"
-              >
-                {fonctions.map((fonction) => (
-                  <option key={fonction} value={fonction}>
-                    {formatFonction(fonction)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="form-label" htmlFor="disponibilite">
-                Disponibilité
-              </label>
-              <select
-                id="disponibilite"
-                name="disponibilite"
-                value={form.disponibilite}
-                onChange={handleChange}
-                className="form-control"
-              >
-                {disponibilites.map((disponibilite) => (
-                  <option key={disponibilite} value={disponibilite}>
-                    {formatDisponibilite(disponibilite)}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <CustomSelect
+              label="Fonction"
+              value={form.fonction}
+              onChange={(value) => handleCustomFormChange('fonction', value)}
+              options={fonctionOptions}
+            />
+            <CustomSelect
+              label={'Disponibilit\u00e9'}
+              value={form.disponibilite}
+              onChange={(value) => handleCustomFormChange('disponibilite', value)}
+              options={disponibiliteOptions}
+            />
 
             <div className="flex flex-wrap items-center gap-2">
               <button type="submit" className="primary-button" disabled={submitting}>
@@ -460,46 +463,18 @@ function Personnel() {
                   />
                 </div>
               </div>
-
-              <div>
-                <label className="form-label" htmlFor="filter-fonction">
-                  Fonction
-                </label>
-                <select
-                  id="filter-fonction"
-                  name="fonction"
-                  value={filters.fonction}
-                  onChange={handleFilterChange}
-                  className="form-control"
-                >
-                  <option value="all">Toutes les fonctions</option>
-                  {fonctions.map((fonction) => (
-                    <option key={fonction} value={fonction}>
-                      {formatFonction(fonction)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="form-label" htmlFor="filter-disponibilite">
-                  Disponibilité
-                </label>
-                <select
-                  id="filter-disponibilite"
-                  name="disponibilite"
-                  value={filters.disponibilite}
-                  onChange={handleFilterChange}
-                  className="form-control"
-                >
-                  <option value="all">Toutes</option>
-                  {disponibilites.map((disponibilite) => (
-                    <option key={disponibilite} value={disponibilite}>
-                      {formatDisponibilite(disponibilite)}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <CustomSelect
+                label="Fonction"
+                value={filters.fonction}
+                onChange={(value) => handleCustomFilterChange('fonction', value)}
+                options={fonctionFilterOptions}
+              />
+              <CustomSelect
+                label={'Disponibilit\u00e9'}
+                value={filters.disponibilite}
+                onChange={(value) => handleCustomFilterChange('disponibilite', value)}
+                options={disponibiliteFilterOptions}
+              />
             </div>
 
             {filteredPersonnel.length === 0 ? (

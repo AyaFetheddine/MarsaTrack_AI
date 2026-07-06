@@ -6,6 +6,7 @@ import {
   personnelApi,
 } from '../api/api'
 import FeedbackMessage from '../components/FeedbackMessage'
+import CustomSelect from '../components/CustomSelect'
 import Loader from '../components/Loader'
 import StatusBadge from '../components/StatusBadge'
 import useAutoClearMessage from '../hooks/useAutoClearMessage'
@@ -45,6 +46,36 @@ const disponibiliteLabels = {
 
 const formatFonction = (value) => fonctionLabels[value] || value
 const formatDisponibilite = (value) => disponibiliteLabels[value] || value
+
+const shiftOptions = ['Shift 1', 'Shift 2', 'Shift 3'].map((shift) => ({
+  value: shift,
+  label: shift,
+}))
+
+const vacationOptions = ['Vacation 1', 'Vacation 2'].map((vacation) => ({
+  value: vacation,
+  label: vacation,
+}))
+
+const fonctionOptions = fonctions.map((fonction) => ({
+  value: fonction,
+  label: formatFonction(fonction),
+}))
+
+const disponibiliteOptions = disponibilites.map((disponibilite) => ({
+  value: disponibilite,
+  label: formatDisponibilite(disponibilite),
+}))
+
+const fonctionFilterOptions = [
+  { value: 'all', label: 'Toutes les fonctions' },
+  ...fonctionOptions,
+]
+
+const disponibiliteFilterOptions = [
+  { value: 'all', label: 'Toutes' },
+  ...disponibiliteOptions,
+]
 
 const formatDate = (value) => {
   if (!value) return '-'
@@ -138,6 +169,14 @@ function Operations() {
   const handleChange = (event) => {
     const { name, value } = event.target
     setForm((current) => ({ ...current, [name]: value }))
+  }
+
+  const handleCustomChange = (name, value) => {
+    setForm((current) => ({ ...current, [name]: value }))
+  }
+
+  const handleCustomPersonnelFilterChange = (name, value) => {
+    setPersonnelFilters((current) => ({ ...current, [name]: value }))
   }
 
   const toggleMember = (personnelId) => {
@@ -271,39 +310,18 @@ function Operations() {
                 required
               />
             </div>
-
-            <div>
-              <label className="form-label" htmlFor="shift">
-                Shift
-              </label>
-              <select
-                id="shift"
-                name="shift"
-                value={form.shift}
-                onChange={handleChange}
-                className="form-control"
-              >
-                <option>Shift 1</option>
-                <option>Shift 2</option>
-                <option>Shift 3</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="form-label" htmlFor="vacation">
-                Vacation
-              </label>
-              <select
-                id="vacation"
-                name="vacation"
-                value={form.vacation}
-                onChange={handleChange}
-                className="form-control"
-              >
-                <option>Vacation 1</option>
-                <option>Vacation 2</option>
-              </select>
-            </div>
+            <CustomSelect
+              label="Shift"
+              value={form.shift}
+              onChange={(value) => handleCustomChange('shift', value)}
+              options={shiftOptions}
+            />
+            <CustomSelect
+              label="Vacation"
+              value={form.vacation}
+              onChange={(value) => handleCustomChange('vacation', value)}
+              options={vacationOptions}
+            />
           </div>
 
           <fieldset>
@@ -369,46 +387,22 @@ function Operations() {
                       />
                     </div>
                   </div>
-
-                  <div>
-                    <label className="form-label" htmlFor="operation-filter-fonction">
-                      Fonction
-                    </label>
-                    <select
-                      id="operation-filter-fonction"
-                      name="fonction"
-                      value={personnelFilters.fonction}
-                      onChange={handlePersonnelFilterChange}
-                      className="form-control"
-                    >
-                      <option value="all">Toutes les fonctions</option>
-                      {fonctions.map((fonction) => (
-                        <option key={fonction} value={fonction}>
-                          {formatFonction(fonction)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="form-label" htmlFor="operation-filter-disponibilite">
-                      Disponibilité
-                    </label>
-                    <select
-                      id="operation-filter-disponibilite"
-                      name="disponibilite"
-                      value={personnelFilters.disponibilite}
-                      onChange={handlePersonnelFilterChange}
-                      className="form-control"
-                    >
-                      <option value="all">Toutes</option>
-                      {disponibilites.map((disponibilite) => (
-                        <option key={disponibilite} value={disponibilite}>
-                          {formatDisponibilite(disponibilite)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <CustomSelect
+                    label="Fonction"
+                    value={personnelFilters.fonction}
+                    onChange={(value) =>
+                      handleCustomPersonnelFilterChange('fonction', value)
+                    }
+                    options={fonctionFilterOptions}
+                  />
+                  <CustomSelect
+                    label={'Disponibilit\u00e9'}
+                    value={personnelFilters.disponibilite}
+                    onChange={(value) =>
+                      handleCustomPersonnelFilterChange('disponibilite', value)
+                    }
+                    options={disponibiliteFilterOptions}
+                  />
                 </div>
 
                 {filteredPersonnel.length === 0 ? (

@@ -31,6 +31,7 @@ export const arretsApi = {
   list: () => api.get('/arrets'),
   create: (payload) => api.post('/arrets', payload),
   close: (id) => api.put(`/arrets/${id}/cloturer`),
+  remove: (id) => api.delete(`/arrets/${id}`),
 }
 
 export const containersApi = {
