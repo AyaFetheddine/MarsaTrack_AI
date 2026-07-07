@@ -25,6 +25,8 @@ export const operationsApi = {
   list: () => api.get('/operations'),
   create: (payload) => api.post('/operations', payload),
   close: (id) => api.put(`/operations/${id}/cloturer`),
+  cancel: (id) => api.put(`/operations/${id}/annuler`),
+  remove: (id) => api.delete(`/operations/${id}`),
 }
 
 export const arretsApi = {
@@ -37,6 +39,7 @@ export const arretsApi = {
 export const containersApi = {
   list: () => api.get('/containers'),
   create: (payload) => api.post('/containers', payload),
+  remove: (id) => api.delete(`/containers/${id}`),
 }
 
 export const usersApi = {

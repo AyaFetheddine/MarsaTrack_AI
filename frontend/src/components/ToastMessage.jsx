@@ -1,19 +1,26 @@
 import { CircleAlert, CircleCheck, X } from 'lucide-react'
 
-function ToastMessage({ message, onClose }) {
+function ToastMessage({ message, onClose, placement = 'top-right' }) {
   if (!message) return null
 
   const type = typeof message === 'object' ? message.type : 'error'
   const content = typeof message === 'object' ? message.message : message
   const isSuccess = type === 'success'
   const Icon = isSuccess ? CircleCheck : CircleAlert
+  const isCentered = placement === 'center'
 
   return (
-    <div className="fixed right-5 top-24 z-40 w-[min(420px,calc(100vw-2.5rem))]">
+    <div
+      className={
+        isCentered
+          ? 'pointer-events-none fixed inset-0 z-50 flex items-center justify-center px-4 py-6'
+          : 'fixed right-5 top-24 z-40 w-[min(420px,calc(100vw-2.5rem))]'
+      }
+    >
       <div
-        className={`flex items-start gap-3 rounded-lg border bg-white p-4 shadow-[0_18px_45px_rgba(13,37,63,0.18)] ${
+        className={`pointer-events-auto flex items-start gap-3 rounded-lg border bg-white p-4 shadow-[0_18px_45px_rgba(13,37,63,0.18)] ${
           isSuccess ? 'border-[#a5d6a7]' : 'border-[#ffcdd2]'
-        }`}
+        } ${isCentered ? 'w-full max-w-2xl' : ''}`}
         role={isSuccess ? 'status' : 'alert'}
       >
         <span

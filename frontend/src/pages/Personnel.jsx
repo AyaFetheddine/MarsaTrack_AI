@@ -17,6 +17,7 @@ import ToastMessage from '../components/ToastMessage'
 import useAutoClearMessage from '../hooks/useAutoClearMessage'
 import useDebouncedValue from '../hooks/useDebouncedValue'
 import { getStoredRole } from '../utils/auth'
+import { fieldErrorClass, scrollToFirstError } from '../utils/formValidation'
 
 const fonctions = [
   'Portiqueur',
@@ -76,6 +77,10 @@ function Personnel() {
   const role = getStoredRole()
   const canManagePersonnel = ['Admin', 'Responsable_Exploitation'].includes(role)
   const formSectionRef = useRef(null)
+  const matriculeRef = useRef(null)
+  const nomCompletRef = useRef(null)
+  const fonctionRef = useRef(null)
+  const disponibiliteRef = useRef(null)
   const [personnel, setPersonnel] = useState([])
   const [form, setForm] = useState(initialForm)
   const [editingPersonnelId, setEditingPersonnelId] = useState(null)
@@ -86,6 +91,7 @@ function Personnel() {
   const [highlightForm, setHighlightForm] = useState(false)
   const [error, setError] = useState('')
   const [feedback, setFeedback] = useState(null)
+  const [formErrors, setFormErrors] = useState({})
   const [filters, setFilters] = useState({
     search: '',
     fonction: 'all',
@@ -141,6 +147,7 @@ function Personnel() {
   const handleChange = (event) => {
     const { name, value } = event.target
     setForm((current) => ({ ...current, [name]: value }))
+    setFormErrors((current) => ({ ...current, [name]: '' }))
   }
 
   const handleFilterChange = (event) => {
@@ -150,6 +157,7 @@ function Personnel() {
 
   const handleCustomFormChange = (name, value) => {
     setForm((current) => ({ ...current, [name]: value }))
+    setFormErrors((current) => ({ ...current, [name]: '' }))
   }
 
   const handleCustomFilterChange = (name, value) => {
@@ -159,6 +167,7 @@ function Personnel() {
   const resetForm = () => {
     setForm(initialForm)
     setEditingPersonnelId(null)
+    setFormErrors({})
   }
 
   const startEdit = (member) => {
@@ -191,8 +200,39 @@ function Personnel() {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
-    setSubmitting(true)
     setFeedback(null)
+
+    const errors = {}
+
+    if (!form.matricule.trim()) {
+      errors.matricule = 'Le matricule est obligatoire.'
+    }
+
+    if (!form.nom_complet.trim()) {
+      errors.nom_complet = 'Le nom complet est obligatoire.'
+    }
+
+    if (!form.fonction) {
+      errors.fonction = 'La fonction est obligatoire.'
+    }
+
+    if (!form.disponibilite) {
+      errors.disponibilite = 'La disponibilité est obligatoire.'
+    }
+
+    setFormErrors(errors)
+
+    if (Object.keys(errors).length > 0) {
+      scrollToFirstError(errors, {
+        matricule: matriculeRef,
+        nom_complet: nomCompletRef,
+        fonction: fonctionRef,
+        disponibilite: disponibiliteRef,
+      })
+      return
+    }
+
+    setSubmitting(true)
 
     try {
       if (editingPersonnelId) {
@@ -343,20 +383,26 @@ function Personnel() {
           <form
             className="grid items-end gap-4 lg:grid-cols-[minmax(150px,0.7fr)_minmax(220px,1fr)_minmax(160px,0.7fr)_minmax(160px,0.7fr)_auto]"
             onSubmit={handleSubmit}
+            noValidate
           >
             <div>
               <label className="form-label" htmlFor="matricule">
                 Matricule
               </label>
               <input
+                ref={matriculeRef}
                 id="matricule"
                 name="matricule"
                 value={form.matricule}
                 onChange={handleChange}
-                className="form-control"
+                className={`form-control ${fieldErrorClass(formErrors.matricule)}`}
                 placeholder="Ex. EQP-003"
-                required
               />
+              {formErrors.matricule && (
+                <p className="mt-1.5 text-xs font-semibold text-[#b71c1c]">
+                  {formErrors.matricule}
+                </p>
+              )}
             </div>
 
             <div>
@@ -364,27 +410,38 @@ function Personnel() {
                 Nom complet
               </label>
               <input
+                ref={nomCompletRef}
                 id="nom_complet"
                 name="nom_complet"
                 value={form.nom_complet}
                 onChange={handleChange}
-                className="form-control"
+                className={`form-control ${fieldErrorClass(formErrors.nom_complet)}`}
                 placeholder="Nom du personnel"
-                required
+              />
+              {formErrors.nom_complet && (
+                <p className="mt-1.5 text-xs font-semibold text-[#b71c1c]">
+                  {formErrors.nom_complet}
+                </p>
+              )}
+            </div>
+            <div ref={fonctionRef}>
+              <CustomSelect
+                label="Fonction"
+                value={form.fonction}
+                onChange={(value) => handleCustomFormChange('fonction', value)}
+                options={fonctionOptions}
+                error={formErrors.fonction}
               />
             </div>
-            <CustomSelect
-              label="Fonction"
-              value={form.fonction}
-              onChange={(value) => handleCustomFormChange('fonction', value)}
-              options={fonctionOptions}
-            />
-            <CustomSelect
-              label={'Disponibilit\u00e9'}
-              value={form.disponibilite}
-              onChange={(value) => handleCustomFormChange('disponibilite', value)}
-              options={disponibiliteOptions}
-            />
+            <div ref={disponibiliteRef}>
+              <CustomSelect
+                label={'Disponibilit\u00e9'}
+                value={form.disponibilite}
+                onChange={(value) => handleCustomFormChange('disponibilite', value)}
+                options={disponibiliteOptions}
+                error={formErrors.disponibilite}
+              />
+            </div>
 
             <div className="flex flex-wrap items-center gap-2">
               <button type="submit" className="primary-button" disabled={submitting}>

@@ -1,6 +1,10 @@
 const express = require('express');
 
-const { saisirContainer, getContainers } = require('../controllers/containerController');
+const {
+  saisirContainer,
+  getContainers,
+  deleteContainer,
+} = require('../controllers/containerController');
 const { authenticateToken, authorizeRoles } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
@@ -27,6 +31,18 @@ router.post(
   authenticateToken,
   authorizeRoles('Admin', 'Portiqueur'),
   saisirContainer
+);
+
+/**
+ * DELETE /api/containers/:id
+ * Supprime un conteneur de test.
+ * Reserve au role : Admin.
+ */
+router.delete(
+  '/:id',
+  authenticateToken,
+  authorizeRoles('Admin'),
+  deleteContainer
 );
 
 module.exports = router;

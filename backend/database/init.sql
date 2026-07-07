@@ -112,9 +112,18 @@ CREATE TABLE IF NOT EXISTS operations (
                    'Vacation 2'
                  )             NOT NULL
                                COMMENT 'Vacation 1=première moitié du shift | Vacation 2=deuxième moitié',
+  numero_escale  VARCHAR(50)   NULL,
+  nom_navire     VARCHAR(150)  NULL,
+  poste_quai     VARCHAR(100)  NULL,
+  type_operation ENUM(
+                   'CHARGEMENT',
+                   'DECHARGEMENT',
+                   'MANUTENTION'
+                 )             NOT NULL DEFAULT 'MANUTENTION',
   statut         ENUM(
                    'en cours',
-                   'cloturee'
+                   'cloturee',
+                   'annulee'
                  )             NOT NULL DEFAULT 'en cours',
   PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci

@@ -148,4 +148,52 @@ const getContainers = async (req, res) => {
   }
 };
 
-module.exports = { saisirContainer, getContainers };
+/**
+ * Controleur : deleteContainer
+ * Route : DELETE /api/containers/:id
+ *
+ * Supprime physiquement un conteneur de test.
+ * Reserve au role Admin.
+ */
+const deleteContainer = async (req, res) => {
+  const { id } = req.params;
+
+  if (!id || isNaN(Number(id))) {
+    return res.status(400).json({
+      status  : 'error',
+      message : 'L\'identifiant du conteneur doit etre un nombre entier valide.',
+    });
+  }
+
+  try {
+    const [rows] = await pool.execute(
+      'SELECT id FROM container WHERE id = ?',
+      [id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        status  : 'error',
+        message : 'Conteneur introuvable.',
+      });
+    }
+
+    await pool.execute('DELETE FROM container WHERE id = ?', [id]);
+
+    return res.status(200).json({
+      status  : 'success',
+      message : 'Conteneur supprime avec succes.',
+      data    : {
+        id: Number(id),
+      },
+    });
+  } catch (error) {
+    console.error('[containerController] Erreur deleteContainer :', error.message);
+    return res.status(500).json({
+      status  : 'error',
+      message : 'Erreur interne du serveur lors de la suppression du conteneur.',
+    });
+  }
+};
+
+module.exports = { saisirContainer, getContainers, deleteContainer };

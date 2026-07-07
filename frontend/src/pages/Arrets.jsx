@@ -1,5 +1,5 @@
 import { LoaderCircle, OctagonAlert, Trash2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   arretsApi,
   getApiErrorMessage,
@@ -7,11 +7,12 @@ import {
 } from '../api/api'
 import ConfirmDialog from '../components/ConfirmDialog'
 import CustomSelect from '../components/CustomSelect'
-import FeedbackMessage from '../components/FeedbackMessage'
 import Loader from '../components/Loader'
 import StatusBadge from '../components/StatusBadge'
+import ToastMessage from '../components/ToastMessage'
 import useAutoClearMessage from '../hooks/useAutoClearMessage'
 import { getStoredRole } from '../utils/auth'
+import { scrollToFirstError } from '../utils/formValidation'
 
 const arretOptions = [
   { code: '1', libelle: 'Mouvements des engins de levage' },
@@ -56,6 +57,9 @@ function Arrets() {
   const [deletingId, setDeletingId] = useState(null)
   const [pendingDeleteArret, setPendingDeleteArret] = useState(null)
   const [feedback, setFeedback] = useState(null)
+  const [formErrors, setFormErrors] = useState({})
+  const operationRef = useRef(null)
+  const codeArretRef = useRef(null)
 
   useAutoClearMessage(feedback, setFeedback)
 
@@ -96,34 +100,37 @@ function Arrets() {
 
   const handleCustomChange = (name, value) => {
     setForm((current) => ({ ...current, [name]: value }))
+    setFormErrors((current) => ({ ...current, [name]: '' }))
   }
 
   const handleSubmit = async (event) => {
     event.preventDefault()
-    setSubmitting(true)
     setFeedback(null)
-
-    if (!form.operation_id) {
-      setSubmitting(false)
-      setFeedback({
-        type: 'error',
-        message: 'Sélectionnez une opération.',
-      })
-      return
-    }
 
     const selectedArret = arretOptions.find(
       (option) => option.code === form.code_arret,
     )
+    const errors = {}
+
+    if (!form.operation_id) {
+      errors.operation_id = 'Sélectionnez une opération.'
+    }
 
     if (!selectedArret) {
-      setSubmitting(false)
-      setFeedback({
-        type: 'error',
-        message: "Sélectionnez un type d'arrêt valide.",
+      errors.code_arret = "Sélectionnez un type d'arrêt valide."
+    }
+
+    setFormErrors(errors)
+
+    if (Object.keys(errors).length > 0) {
+      scrollToFirstError(errors, {
+        operation_id: operationRef,
+        code_arret: codeArretRef,
       })
       return
     }
+
+    setSubmitting(true)
 
     try {
       await arretsApi.create({
@@ -132,6 +139,7 @@ function Arrets() {
         libelle_arret: selectedArret.libelle,
       })
       setForm(initialForm)
+      setFormErrors({})
       await refreshArrets()
       setFeedback({
         type: 'success',
@@ -222,7 +230,11 @@ function Arrets() {
       </header>
 
       {feedback && (
-        <FeedbackMessage type={feedback.type}>{feedback.message}</FeedbackMessage>
+        <ToastMessage
+          message={feedback}
+          onClose={() => setFeedback(null)}
+          placement="center"
+        />
       )}
 
       {canManageArrets ? (
@@ -241,26 +253,33 @@ function Arrets() {
             <form
               className="grid items-end gap-4 md:grid-cols-[minmax(0,1fr)_minmax(260px,0.9fr)_auto]"
               onSubmit={handleSubmit}
+              noValidate
             >
-              <CustomSelect
-                label="Opération"
-                value={form.operation_id}
-                onChange={(value) => handleCustomChange('operation_id', value)}
-                options={operations.map((operation) => ({
-                  value: String(operation.id),
-                  label: `${operation.nom_operation} - ${operation.shift}`,
-                }))}
-                placeholder="Sélectionner une opération"
-                disabled={operations.length === 0}
-              />
+              <div ref={operationRef}>
+                <CustomSelect
+                  label="Opération"
+                  value={form.operation_id}
+                  onChange={(value) => handleCustomChange('operation_id', value)}
+                  options={operations.map((operation) => ({
+                    value: String(operation.id),
+                    label: `${operation.nom_operation} - ${operation.shift}`,
+                  }))}
+                  placeholder="Sélectionner une opération"
+                  disabled={operations.length === 0}
+                  error={formErrors.operation_id}
+                />
+              </div>
 
-              <CustomSelect
-                label="Type d'arrêt"
-                value={form.code_arret}
-                onChange={(value) => handleCustomChange('code_arret', value)}
-                options={arretSelectOptions}
-                placeholder="Sélectionner un code arrêt"
-              />
+              <div ref={codeArretRef}>
+                <CustomSelect
+                  label="Type d'arrêt"
+                  value={form.code_arret}
+                  onChange={(value) => handleCustomChange('code_arret', value)}
+                  options={arretSelectOptions}
+                  placeholder="Sélectionner un code arrêt"
+                  error={formErrors.code_arret}
+                />
+              </div>
 
               <button
                 type="submit"
