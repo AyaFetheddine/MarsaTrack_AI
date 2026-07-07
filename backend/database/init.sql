@@ -211,7 +211,7 @@ CREATE TABLE IF NOT EXISTS container (
   operation_id      INT UNSIGNED   NOT NULL,
   matricule_iso     VARCHAR(20)    NOT NULL
                     COMMENT 'Norme ISO 6346 : 4 lettres + 7 chiffres (ex: MSCU1234567). Validation regex côté API.',
-  image_url         VARCHAR(500)   NOT NULL
+  image_url         VARCHAR(500)   NULL
                     COMMENT 'Chemin relatif ou URL S3 de la photo source',
   mouvement         ENUM('IMPORT', 'EXPORT') NOT NULL DEFAULT 'IMPORT'
                     COMMENT 'IMPORT : navire vers terminal, EXPORT : terminal vers navire',

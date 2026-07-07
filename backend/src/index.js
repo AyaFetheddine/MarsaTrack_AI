@@ -4,6 +4,7 @@ require('dotenv').config();
 
 const express = require('express');
 const cors    = require('cors');
+const path    = require('path');
 
 const { testConnection } = require('./config/db');
 
@@ -25,6 +26,9 @@ app.use(cors());
 
 // Parse automatiquement le corps des requêtes en JSON
 app.use(express.json());
+
+// Sert les images uploadÃ©es pour les conteneurs.
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 
 // ─── Routes ──────────────────────────────────────────────────────────────────

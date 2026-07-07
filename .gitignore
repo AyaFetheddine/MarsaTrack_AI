@@ -45,7 +45,8 @@ yarn-error.log*
 # Contient les photos de conteneurs uploadées pendant les tests — ne jamais
 # pousser des fichiers binaires/images sur GitHub
 # -----------------------------------------------------------------------------
-/backend/uploads/
+/backend/uploads/containers/*
+!/backend/uploads/containers/.gitkeep
 
 
 # -----------------------------------------------------------------------------

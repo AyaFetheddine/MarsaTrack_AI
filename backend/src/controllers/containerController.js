@@ -1,8 +1,20 @@
+const fs = require('fs');
+
 const { pool } = require('../config/db');
 
 // ISO 6346 simplifie : exactement 4 lettres majuscules puis 7 chiffres.
 const ISO_6346_REGEX = /^[A-Z]{4}\d{7}$/;
 const ALLOWED_MOUVEMENTS = ['IMPORT', 'EXPORT'];
+
+const cleanupUploadedFile = (file) => {
+  if (!file?.path) return;
+
+  fs.unlink(file.path, (error) => {
+    if (error) {
+      console.error('[containerController] Erreur suppression fichier upload :', error.message);
+    }
+  });
+};
 
 /**
  * Controleur : saisirContainer
@@ -14,18 +26,23 @@ const ALLOWED_MOUVEMENTS = ['IMPORT', 'EXPORT'];
 const saisirContainer = async (req, res) => {
   const { operation_id, matricule_iso, image_url } = req.body;
   const mouvement = req.body.mouvement || 'IMPORT';
+  const storedImageUrl = req.file
+    ? `/uploads/containers/${req.file.filename}`
+    : image_url?.trim() || null;
   const ai_confidence = null;
   const createdBy = req.user.id;
 
   // Validation des champs obligatoires
-  if (!operation_id || !matricule_iso || !image_url) {
+  if (!operation_id || !matricule_iso) {
+    cleanupUploadedFile(req.file);
     return res.status(400).json({
       status  : 'error',
-      message : 'Les champs operation_id, matricule_iso et image_url sont obligatoires.',
+      message : 'Les champs operation_id et matricule_iso sont obligatoires.',
     });
   }
 
   if (isNaN(Number(operation_id))) {
+    cleanupUploadedFile(req.file);
     return res.status(400).json({
       status  : 'error',
       message : 'L\'identifiant de l\'operation doit etre un nombre entier valide.',
@@ -34,6 +51,7 @@ const saisirContainer = async (req, res) => {
 
   // Regex ISO 6346 : 4 lettres majuscules (proprietaire + categorie) suivies de 7 chiffres.
   if (!ISO_6346_REGEX.test(matricule_iso)) {
+    cleanupUploadedFile(req.file);
     return res.status(400).json({
       status  : 'error',
       message : 'Format matricule_iso invalide. Format attendu : 4 lettres majuscules suivies de 7 chiffres (ex: MSCU1234567).',
@@ -41,9 +59,18 @@ const saisirContainer = async (req, res) => {
   }
 
   if (!ALLOWED_MOUVEMENTS.includes(mouvement)) {
+    cleanupUploadedFile(req.file);
     return res.status(400).json({
       status  : 'error',
       message : 'Le mouvement doit etre IMPORT ou EXPORT.',
+    });
+  }
+
+  if (!storedImageUrl) {
+    cleanupUploadedFile(req.file);
+    return res.status(400).json({
+      status  : 'error',
+      message : 'Importez une image du conteneur ou renseignez une URL image.',
     });
   }
 
@@ -55,6 +82,7 @@ const saisirContainer = async (req, res) => {
     );
 
     if (opRows.length === 0) {
+      cleanupUploadedFile(req.file);
       return res.status(404).json({
         status  : 'error',
         message : `Operation introuvable (id: ${operation_id}).`,
@@ -71,7 +99,7 @@ const saisirContainer = async (req, res) => {
          created_by
        )
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [operation_id, matricule_iso, image_url, mouvement, ai_confidence, createdBy]
+      [operation_id, matricule_iso, storedImageUrl, mouvement, ai_confidence, createdBy]
     );
 
     const [createdRows] = await pool.execute(
@@ -86,7 +114,7 @@ const saisirContainer = async (req, res) => {
         id            : result.insertId,
         operation_id  : Number(operation_id),
         matricule_iso,
-        image_url,
+        image_url     : storedImageUrl,
         mouvement,
         ai_confidence,
         created_by    : createdBy,
@@ -94,6 +122,7 @@ const saisirContainer = async (req, res) => {
       },
     });
   } catch (error) {
+    cleanupUploadedFile(req.file);
     console.error('[containerController] Erreur saisirContainer :', error.message);
     return res.status(500).json({
       status  : 'error',

@@ -6,6 +6,7 @@ const {
   deleteContainer,
 } = require('../controllers/containerController');
 const { authenticateToken, authorizeRoles } = require('../middlewares/authMiddleware');
+const { uploadContainerImage } = require('../middlewares/uploadMiddleware');
 
 const router = express.Router();
 
@@ -30,6 +31,7 @@ router.post(
   '/',
   authenticateToken,
   authorizeRoles('Admin', 'Portiqueur'),
+  uploadContainerImage,
   saisirContainer
 );
 

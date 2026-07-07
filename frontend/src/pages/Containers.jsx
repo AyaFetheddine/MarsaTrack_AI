@@ -1,4 +1,4 @@
-import { Boxes, ExternalLink, LoaderCircle, Trash2 } from 'lucide-react'
+import { Boxes, ExternalLink, ImagePlus, LoaderCircle, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import {
   containersApi,
@@ -15,6 +15,8 @@ import { getStoredRole } from '../utils/auth'
 import { fieldErrorClass, scrollToFirstError } from '../utils/formValidation'
 
 const ISO_6346_REGEX = /^[A-Z]{4}\d{7}$/
+const BACKEND_BASE_URL = 'http://localhost:3001'
+const ACCEPTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp']
 
 const initialForm = {
   operation_id: '',
@@ -37,6 +39,12 @@ const formatDateTime = (value) => {
   }).format(new Date(value))
 }
 
+const resolveImageUrl = (imageUrl) => {
+  if (!imageUrl) return null
+  if (imageUrl.startsWith('http')) return imageUrl
+  return `${BACKEND_BASE_URL}${imageUrl}`
+}
+
 function Containers() {
   const role = getStoredRole()
   const canCreateContainer = ['Admin', 'Portiqueur'].includes(role)
@@ -50,15 +58,29 @@ function Containers() {
   const [pendingDeleteContainer, setPendingDeleteContainer] = useState(null)
   const [feedback, setFeedback] = useState(null)
   const [formErrors, setFormErrors] = useState({})
+  const [selectedImage, setSelectedImage] = useState(null)
+  const [previewUrl, setPreviewUrl] = useState('')
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const operationRef = useRef(null)
   const mouvementRef = useRef(null)
   const matriculeIsoRef = useRef(null)
+  const imageBlockRef = useRef(null)
+  const imageInputRef = useRef(null)
   const imageUrlRef = useRef(null)
 
   useAutoClearMessage(feedback, setFeedback, null, {
     successDuration: 7000,
     errorDuration: 15000,
   })
+
+  useEffect(
+    () => () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    },
+    [previewUrl],
+  )
 
   const refreshContainers = async () => {
     const response = await containersApi.list()
@@ -109,6 +131,62 @@ function Containers() {
     setFormErrors((current) => ({ ...current, [name]: '' }))
   }
 
+  const handleImageChange = (event) => {
+    const file = event.target.files?.[0]
+
+    if (!file) return
+
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      setSelectedImage(null)
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+      setPreviewUrl('')
+      event.target.value = ''
+      setFormErrors((current) => ({
+        ...current,
+        image: 'Format image invalide. Formats acceptés : PNG, JPEG ou WebP.',
+      }))
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setSelectedImage(null)
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+      setPreviewUrl('')
+      event.target.value = ''
+      setFormErrors((current) => ({
+        ...current,
+        image: 'Image trop lourde. Taille maximale autorisée : 5 MB.',
+      }))
+      return
+    }
+
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl)
+    }
+
+    setSelectedImage(file)
+    setPreviewUrl(URL.createObjectURL(file))
+    setFormErrors((current) => ({ ...current, image: '', image_url: '' }))
+  }
+
+  const removeSelectedImage = () => {
+    setSelectedImage(null)
+    setIsPreviewOpen(false)
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl)
+    }
+    setPreviewUrl('')
+    setFormErrors((current) => ({ ...current, image: '' }))
+
+    if (imageInputRef.current) {
+      imageInputRef.current.value = ''
+    }
+  }
+
   const validateContainerForm = () => {
     const errors = {}
 
@@ -127,15 +205,8 @@ function Containers() {
         'Format attendu : 4 lettres majuscules suivies de 7 chiffres, ex. MSCU1234567.'
     }
 
-    if (!form.image_url.trim()) {
-      errors.image_url = "L'URL de l'image est obligatoire."
-    } else {
-      try {
-        new URL(form.image_url)
-      } catch {
-        errors.image_url =
-          'Renseignez une URL valide, ex. https://exemple.ma/conteneur.jpg.'
-      }
+    if (!selectedImage) {
+      errors.image = 'Veuillez importer une image du conteneur.'
     }
 
     return errors
@@ -153,6 +224,7 @@ function Containers() {
         operation_id: operationRef,
         mouvement: mouvementRef,
         matricule_iso: matriculeIsoRef,
+        image: imageBlockRef,
         image_url: imageUrlRef,
       })
       return
@@ -161,14 +233,17 @@ function Containers() {
     setSubmitting(true)
 
     try {
-      await containersApi.create({
-        operation_id: Number(form.operation_id),
-        matricule_iso: form.matricule_iso,
-        image_url: form.image_url,
-        mouvement: form.mouvement,
-      })
+      const formData = new FormData()
+      formData.append('operation_id', form.operation_id)
+      formData.append('mouvement', form.mouvement)
+      formData.append('matricule_iso', form.matricule_iso)
+
+      formData.append('image', selectedImage)
+
+      await containersApi.create(formData)
       setForm(initialForm)
       setFormErrors({})
+      removeSelectedImage()
       await refreshContainers()
       setFeedback({
         type: 'success',
@@ -245,7 +320,7 @@ function Containers() {
             <Loader label="Chargement des opérations..." />
           ) : (
             <form
-              className="grid items-end gap-4 xl:grid-cols-[minmax(220px,0.8fr)_minmax(150px,0.45fr)_minmax(190px,0.55fr)_minmax(260px,1fr)_auto]"
+              className="space-y-5"
               onSubmit={handleSubmit}
               noValidate
             >
@@ -295,10 +370,156 @@ function Containers() {
                 )}
               </div>
 
-              <div>
+              <div ref={imageBlockRef}>
+                <span className="form-label">Image du conteneur</span>
+                <div
+                  className={`relative min-h-[380px] overflow-hidden rounded-md border border-dashed transition ${
+                    formErrors.image
+                      ? 'border-[#ef9a9a] bg-[#fffafa] shadow-[0_0_0_4px_rgba(239,154,154,0.28)]'
+                      : 'border-[#c0d5e8] bg-[#f8fbff] hover:border-marsa-ciel hover:bg-[#f0f8fd]'
+                  }`}
+                >
+                  <input
+                    ref={imageInputRef}
+                    id="container-image"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={handleImageChange}
+                    className="sr-only"
+                  />
+
+                  {previewUrl ? (
+                    <>
+                      <img
+                        src={previewUrl}
+                        alt="Previsualisation du conteneur"
+                        className="absolute inset-x-0 top-0 h-[calc(100%-4.5rem)] w-full object-contain bg-[#f8fbff]"
+                      />
+                      <div className="hidden" />
+                      <div className="absolute inset-x-0 bottom-0 flex min-h-[4.5rem] flex-wrap items-center gap-2 border-t border-[#d8e6f3] bg-white/95 px-4 py-3 shadow-[0_-8px_18px_rgba(20,50,77,0.08)]">
+                        <div className="min-w-0 flex-1">
+                          <p className="max-w-full truncate text-sm font-bold text-marsa-royal">
+                            {selectedImage.name}
+                          </p>
+                          <p className="mt-0.5 text-xs text-marsa-muted">
+                            Image prête pour la future détection IA.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setIsPreviewOpen(true)}
+                          className="inline-flex min-h-9 items-center rounded-md border border-[#c8d8e8] bg-white px-3 text-xs font-bold text-marsa-royal shadow-sm transition hover:border-marsa-royal hover:bg-[#eef5fb]"
+                        >
+                          Voir en grand
+                        </button>
+                        <label
+                          htmlFor="container-image"
+                          className="inline-flex min-h-9 cursor-pointer items-center rounded-md border border-[#c8d8e8] bg-white px-3 text-xs font-bold text-marsa-royal shadow-sm transition hover:border-marsa-royal hover:bg-[#eef5fb]"
+                        >
+                          Changer l'image
+                        </label>
+                        <button
+                          type="button"
+                          onClick={removeSelectedImage}
+                          className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[#fecaca] bg-white px-3 text-xs font-bold text-[#b71c1c] shadow-sm transition hover:border-[#b91c1c] hover:bg-[#fff5f5]"
+                        >
+                          <X size={15} />
+                          Retirer
+                        </button>
+                      </div>
+                      <div className="hidden">
+                        <p className="max-w-full truncate text-sm font-bold">
+                          {selectedImage.name}
+                        </p>
+                        <p className="mt-1 text-xs text-white/80">
+                          Image prête pour la future détection IA.
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <label
+                      htmlFor="container-image"
+                      className="flex min-h-[320px] cursor-pointer flex-col items-center justify-center px-4 py-8 text-center"
+                    >
+                      <ImagePlus size={36} className="mb-4 text-marsa-ciel" />
+                      <span className="text-base font-bold text-marsa-royal">
+                        Importer une image
+                      </span>
+                      <span className="mt-2 text-sm text-marsa-muted">
+                        PNG, JPEG ou WebP, 5 MB maximum
+                      </span>
+                      <span className="mt-4 rounded-full bg-white px-4 py-2 text-xs font-semibold text-marsa-muted shadow-sm">
+                        Cliquez pour sélectionner une image du conteneur
+                      </span>
+                    </label>
+                  )}
+                </div>
+                <div className="hidden">
+                  <label
+                    htmlFor="container-image"
+                    className={`flex min-h-40 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed bg-[#f8fbff] px-4 py-6 text-center transition hover:border-marsa-ciel hover:bg-[#f0f8fd] ${
+                      formErrors.image ? 'border-[#ef9a9a] bg-[#fffafa]' : 'border-[#c0d5e8]'
+                    }`}
+                  >
+                    <ImagePlus size={28} className="mb-3 text-marsa-ciel" />
+                    <span className="text-sm font-bold text-marsa-royal">
+                      Importer une image
+                    </span>
+                    <span className="mt-1 text-xs text-marsa-muted">
+                      PNG, JPEG ou WebP, 5 MB maximum
+                    </span>
+                    {selectedImage && (
+                      <span className="mt-3 max-w-full truncate rounded-full bg-white px-3 py-1 text-xs font-semibold text-marsa-text">
+                        {selectedImage.name}
+                      </span>
+                    )}
+                    <input
+                      id="container-image-legacy"
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={handleImageChange}
+                      className="sr-only"
+                    />
+                  </label>
+
+                  <div className="rounded-md border border-marsa-border bg-white p-3">
+                    {previewUrl ? (
+                      <div className="space-y-3">
+                        <img
+                          src={previewUrl}
+                          alt="Prévisualisation du conteneur"
+                          className="h-40 w-full rounded-md object-contain bg-[#f8fbff]"
+                        />
+                        <button
+                          type="button"
+                          onClick={removeSelectedImage}
+                          className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[#c8d8e8] px-3 text-xs font-bold text-marsa-royal transition hover:border-marsa-royal hover:bg-[#eef5fb]"
+                        >
+                          <X size={15} />
+                          Retirer
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex h-full min-h-40 items-center justify-center rounded-md bg-[#f8fbff] px-4 text-center text-sm text-marsa-muted">
+                        La prévisualisation apparaîtra ici après sélection.
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {formErrors.image && (
+                  <p className="mt-1.5 text-xs font-semibold text-[#b71c1c]">
+                    {formErrors.image}
+                  </p>
+                )}
+              </div>
+
+              <div className="hidden">
                 <label className="form-label" htmlFor="image_url">
-                  URL de l'image
+                  URL image (optionnel)
                 </label>
+                <p className="mb-2 text-xs text-marsa-muted">
+                  Option temporaire utilisée seulement si aucune image n'est uploadée.
+                </p>
                 <input
                   ref={imageUrlRef}
                   id="image_url"
@@ -314,6 +535,11 @@ function Containers() {
                     {formErrors.image_url}
                   </p>
                 )}
+              </div>
+
+              <div className="rounded-md border border-[#d8e6f3] bg-white px-4 py-3 text-sm text-marsa-muted">
+                <span className="font-bold text-marsa-royal">Détection IA : à venir.</span>{' '}
+                YOLO/OCR sera utilisé plus tard pour proposer automatiquement l'ID du conteneur à partir de l'image.
               </div>
 
               <button
@@ -390,9 +616,9 @@ function Containers() {
                     </td>
                     <td>{container.nom_operation}</td>
                     <td>
-                      {container.image_url ? (
+                      {resolveImageUrl(container.image_url) ? (
                         <a
-                          href={container.image_url}
+                          href={resolveImageUrl(container.image_url)}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex items-center gap-1.5 font-semibold text-marsa-ciel hover:text-marsa-royal"
@@ -439,6 +665,38 @@ function Containers() {
           </div>
         )}
       </section>
+
+      {isPreviewOpen && previewUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#14324d]/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-6xl overflow-hidden rounded-md bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-marsa-border px-5 py-4">
+              <div className="min-w-0">
+                <h3 className="font-bold text-marsa-royal">
+                  Prévisualisation du conteneur
+                </h3>
+                <p className="mt-1 max-w-full truncate text-xs text-marsa-muted">
+                  {selectedImage?.name}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPreviewOpen(false)}
+                className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[#c8d8e8] px-3 text-xs font-bold text-marsa-royal transition hover:border-marsa-royal hover:bg-[#eef5fb]"
+              >
+                <X size={15} />
+                Fermer
+              </button>
+            </div>
+            <div className="flex max-h-[78vh] items-center justify-center bg-[#f8fbff] p-4">
+              <img
+                src={previewUrl}
+                alt="Image du conteneur en grand"
+                className="max-h-[74vh] max-w-full object-contain"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {pendingDeleteContainer && (
         <ConfirmDialog
