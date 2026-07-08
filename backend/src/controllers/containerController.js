@@ -1,9 +1,10 @@
 const fs = require('fs');
 
 const { pool } = require('../config/db');
+const {
+  validateContainerCode,
+} = require('../utils/iso6346');
 
-// ISO 6346 simplifie : exactement 4 lettres majuscules puis 7 chiffres.
-const ISO_6346_REGEX = /^[A-Z]{4}\d{7}$/;
 const ALLOWED_MOUVEMENTS = ['IMPORT', 'EXPORT'];
 const ALLOWED_DETECTION_SOURCES = ['MANUELLE', 'IA_VALIDEE', 'IA_CORRIGEE'];
 
@@ -38,8 +39,10 @@ const saisirContainer = async (req, res) => {
   const storedImageUrl = req.file
     ? `/uploads/containers/${req.file.filename}`
     : image_url?.trim() || null;
-  const normalizedMatriculeIso = matricule_iso?.trim().toUpperCase();
-  const normalizedDetectedIso = detected_iso?.trim().toUpperCase() || null;
+  const matriculeValidation = validateContainerCode(matricule_iso);
+  const detectedValidation = detected_iso
+    ? validateContainerCode(detected_iso)
+    : null;
   const createdBy = req.user.id;
 
   // Validation des champs obligatoires
@@ -59,12 +62,19 @@ const saisirContainer = async (req, res) => {
     });
   }
 
-  // Regex ISO 6346 : 4 lettres majuscules (proprietaire + categorie) suivies de 7 chiffres.
-  if (!ISO_6346_REGEX.test(normalizedMatriculeIso)) {
+  if (!matriculeValidation.isValidFormat) {
     cleanupUploadedFile(req.file);
     return res.status(400).json({
       status  : 'error',
-      message : 'Format matricule_iso invalide. Format attendu : 4 lettres majuscules suivies de 7 chiffres (ex: MSCU1234567).',
+      message : 'Matricule ISO 6346 invalide : format attendu 4 lettres + 7 chiffres.',
+    });
+  }
+
+  if (!matriculeValidation.isValidCheckDigit) {
+    cleanupUploadedFile(req.file);
+    return res.status(400).json({
+      status  : 'error',
+      message : `Matricule ISO 6346 invalide : chiffre de controle incorrect. Chiffre attendu : ${matriculeValidation.expectedCheckDigit}.`,
     });
   }
 
@@ -84,7 +94,7 @@ const saisirContainer = async (req, res) => {
     });
   }
 
-  if (detectionSource !== 'MANUELLE' && !normalizedDetectedIso) {
+  if (detectionSource !== 'MANUELLE' && !detectedValidation) {
     cleanupUploadedFile(req.file);
     return res.status(400).json({
       status  : 'error',
@@ -92,11 +102,19 @@ const saisirContainer = async (req, res) => {
     });
   }
 
-  if (normalizedDetectedIso && !ISO_6346_REGEX.test(normalizedDetectedIso)) {
+  if (detectedValidation && !detectedValidation.isValidFormat) {
     cleanupUploadedFile(req.file);
     return res.status(400).json({
       status  : 'error',
-      message : 'Format detected_iso invalide. Format attendu : 4 lettres majuscules suivies de 7 chiffres.',
+      message : 'Matricule detecte ISO 6346 invalide : format attendu 4 lettres + 7 chiffres.',
+    });
+  }
+
+  if (detectedValidation && !detectedValidation.isValidCheckDigit) {
+    cleanupUploadedFile(req.file);
+    return res.status(400).json({
+      status  : 'error',
+      message : `Matricule detecte ISO 6346 invalide : chiffre de controle incorrect. Chiffre attendu : ${detectedValidation.expectedCheckDigit}.`,
     });
   }
 
@@ -117,7 +135,9 @@ const saisirContainer = async (req, res) => {
     });
   }
 
-  const storedDetectedIso = detectionSource === 'MANUELLE' ? null : normalizedDetectedIso;
+  const storedDetectedIso = detectionSource === 'MANUELLE'
+    ? null
+    : detectedValidation.normalized;
   const storedAiConfidence = detectionSource === 'MANUELLE' ? null : normalizedAiConfidence;
 
   if (!storedImageUrl) {
@@ -157,7 +177,7 @@ const saisirContainer = async (req, res) => {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         operation_id,
-        normalizedMatriculeIso,
+        matriculeValidation.normalized,
         storedImageUrl,
         mouvement,
         storedDetectedIso,
@@ -178,7 +198,7 @@ const saisirContainer = async (req, res) => {
       data    : {
         id            : result.insertId,
         operation_id  : Number(operation_id),
-        matricule_iso : normalizedMatriculeIso,
+        matricule_iso : matriculeValidation.normalized,
         image_url     : storedImageUrl,
         mouvement,
         detected_iso  : storedDetectedIso,

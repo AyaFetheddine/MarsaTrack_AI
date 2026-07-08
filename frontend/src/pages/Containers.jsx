@@ -25,8 +25,37 @@ import { getStoredRole } from '../utils/auth'
 import { fieldErrorClass, scrollToFirstError } from '../utils/formValidation'
 
 const ISO_6346_REGEX = /^[A-Z]{4}\d{7}$/
+const ISO_6346_WITHOUT_CHECK_DIGIT_REGEX = /^[A-Z]{4}\d{6}$/
 const BACKEND_BASE_URL = 'http://localhost:3001'
 const ACCEPTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp']
+const ISO_6346_LETTER_VALUES = {
+  A: 10,
+  B: 12,
+  C: 13,
+  D: 14,
+  E: 15,
+  F: 16,
+  G: 17,
+  H: 18,
+  I: 19,
+  J: 20,
+  K: 21,
+  L: 23,
+  M: 24,
+  N: 25,
+  O: 26,
+  P: 27,
+  Q: 28,
+  R: 29,
+  S: 30,
+  T: 31,
+  U: 32,
+  V: 34,
+  W: 35,
+  X: 36,
+  Y: 37,
+  Z: 38,
+}
 
 const initialForm = {
   operation_id: '',
@@ -55,7 +84,51 @@ const resolveImageUrl = (imageUrl) => {
   return `${BACKEND_BASE_URL}${imageUrl}`
 }
 
-const normalizeIso = (value = '') => value.trim().toUpperCase()
+const normalizeIso = (value = '') => value.replace(/[\s-]/g, '').toUpperCase()
+
+const normalizeContainerCode = (value = '') =>
+  value.replace(/[\s-]/g, '').toUpperCase()
+
+const calculateIsoCheckDigit = (codeWithoutCheckDigit) => {
+  const normalized = normalizeContainerCode(codeWithoutCheckDigit)
+
+  if (!ISO_6346_WITHOUT_CHECK_DIGIT_REGEX.test(normalized)) return null
+
+  const total = normalized.split('').reduce((sum, character, index) => {
+    const value = /^\d$/.test(character)
+      ? Number(character)
+      : ISO_6346_LETTER_VALUES[character]
+
+    return sum + value * 2 ** index
+  }, 0)
+
+  const remainder = total % 11
+  return String(remainder === 10 ? 0 : remainder)
+}
+
+const validateIso6346 = (value) => {
+  const normalized = normalizeContainerCode(value)
+
+  if (!ISO_6346_REGEX.test(normalized)) {
+    return {
+      normalized,
+      isValidFormat: false,
+      isValidCheckDigit: false,
+      isValid: false,
+    }
+  }
+
+  const expectedCheckDigit = calculateIsoCheckDigit(normalized.slice(0, 10))
+  const isValidCheckDigit = normalized.slice(10) === expectedCheckDigit
+
+  return {
+    normalized,
+    isValidFormat: true,
+    isValidCheckDigit,
+    isValid: isValidCheckDigit,
+    expectedCheckDigit,
+  }
+}
 
 const getDetectionTrace = (matriculeIso, visionResult) => {
   if (!visionResult?.detected_iso) {
@@ -96,6 +169,20 @@ const getDetectionSourceLabel = (source) =>
 
 const getDetectionSourceClass = (source) =>
   detectionSourceClasses[source] || detectionSourceClasses.MANUELLE
+
+const getVisionValidationLabel = (result) => {
+  if (!result?.is_valid_format) return 'Format ISO invalide'
+  if (!result?.is_valid_check_digit) return 'Chiffre de contrôle invalide'
+  return 'Code ISO valide'
+}
+
+const getVisionValidationClass = (result) => {
+  if (result?.is_valid_format && result?.is_valid_check_digit) {
+    return 'bg-[#dcfce7] text-[#047857]'
+  }
+
+  return 'bg-[#fee2e2] text-[#b91c1c]'
+}
 
 function Containers() {
   const role = getStoredRole()
@@ -176,7 +263,7 @@ function Containers() {
     const { name, value } = event.target
     setForm((current) => ({
       ...current,
-      [name]: name === 'matricule_iso' ? value.toUpperCase() : value,
+      [name]: name === 'matricule_iso' ? normalizeContainerCode(value) : value,
     }))
     setFormErrors((current) => ({ ...current, [name]: '' }))
   }
@@ -290,9 +377,15 @@ function Containers() {
 
     if (!form.matricule_iso.trim()) {
       errors.matricule_iso = 'Le matricule ISO est obligatoire.'
-    } else if (!ISO_6346_REGEX.test(form.matricule_iso)) {
-      errors.matricule_iso =
-        'Format attendu : 4 lettres majuscules suivies de 7 chiffres, ex. MSCU1234567.'
+    } else {
+      const isoValidation = validateIso6346(form.matricule_iso)
+
+      if (!isoValidation.isValidFormat) {
+        errors.matricule_iso =
+          'Format attendu : 4 lettres + 7 chiffres avec chiffre de contrôle ISO 6346 valide.'
+      } else if (!isoValidation.isValidCheckDigit) {
+        errors.matricule_iso = `Chiffre de contrôle ISO 6346 incorrect. Chiffre attendu : ${isoValidation.expectedCheckDigit}.`
+      }
     }
 
     if (!selectedImage) {
@@ -326,7 +419,7 @@ function Containers() {
       const formData = new FormData()
       formData.append('operation_id', form.operation_id)
       formData.append('mouvement', form.mouvement)
-      formData.append('matricule_iso', form.matricule_iso)
+      formData.append('matricule_iso', normalizeContainerCode(form.matricule_iso))
       const detectionTrace = getDetectionTrace(form.matricule_iso, visionResult)
       formData.append('detection_source', detectionTrace.source)
 
@@ -472,7 +565,7 @@ function Containers() {
                   value={form.matricule_iso}
                   onChange={handleChange}
                   className={`form-control uppercase ${fieldErrorClass(formErrors.matricule_iso)}`}
-                  placeholder="MSCU1234567"
+                  placeholder="MRKU6234191"
                   maxLength={11}
                 />
                 {formErrors.matricule_iso && (
@@ -657,18 +750,21 @@ function Containers() {
                       )}
                     </div>
                     <span
-                      className={`inline-flex min-h-8 items-center gap-1.5 rounded-full px-3 text-xs font-bold ${
-                        visionResult.is_valid_iso
-                          ? 'bg-[#dcfce7] text-[#047857]'
-                          : 'bg-[#fee2e2] text-[#b91c1c]'
-                      }`}
+                      className={`inline-flex min-h-8 items-center gap-1.5 rounded-full px-3 text-xs font-bold ${getVisionValidationClass(
+                        visionResult,
+                      )}`}
                     >
                       <CheckCircle2 size={15} />
-                      {visionResult.is_valid_iso
-                        ? 'Code ISO valide'
-                        : 'Code ISO invalide'}
+                      {getVisionValidationLabel(visionResult)}
                     </span>
                   </div>
+
+                  {!visionResult.is_valid_check_digit &&
+                    visionResult.expected_check_digit && (
+                      <p className="mt-3 rounded-md border border-[#fecaca] bg-[#fff5f5] px-3 py-2 text-xs font-semibold text-[#b91c1c]">
+                        Chiffre attendu : {visionResult.expected_check_digit}
+                      </p>
+                    )}
 
                   <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-5">
                     <div className="rounded-md bg-white p-3">

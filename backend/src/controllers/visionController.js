@@ -1,4 +1,6 @@
-const ISO_6346_REGEX = /^[A-Z]{4}\d{7}$/;
+const {
+  validateContainerCode,
+} = require('../utils/iso6346');
 
 const SIMULATED_DETECTED_ISO = 'MRKU6234191';
 
@@ -17,18 +19,20 @@ const detectContainer = (req, res) => {
     });
   }
 
-  const detectedIso = SIMULATED_DETECTED_ISO;
-  const isValidIso = ISO_6346_REGEX.test(detectedIso);
+  const validation = validateContainerCode(SIMULATED_DETECTED_ISO);
 
   return res.status(200).json({
-    detected_iso  : detectedIso,
-    confidence    : 0.60,
-    is_valid_iso  : isValidIso,
-    owner_code    : detectedIso.slice(0, 3),
-    category      : detectedIso.slice(3, 4),
-    serial_number : detectedIso.slice(4, 10),
-    check_digit   : detectedIso.slice(10, 11),
-    message       : 'Detection simulee reussie.',
+    detected_iso         : validation.normalized,
+    confidence           : 0.60,
+    is_valid_iso         : validation.isValid,
+    is_valid_format      : validation.isValidFormat,
+    is_valid_check_digit : validation.isValidCheckDigit,
+    owner_code           : validation.ownerCode,
+    category             : validation.category,
+    serial_number        : validation.serialNumber,
+    check_digit          : validation.checkDigit,
+    expected_check_digit : validation.expectedCheckDigit,
+    message              : 'Detection simulee reussie.',
   });
 };
 
