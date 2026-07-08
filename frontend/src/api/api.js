@@ -50,6 +50,10 @@ export const containersApi = {
   remove: (id) => api.delete(`/containers/${id}`),
 }
 
+export const visionApi = {
+  detectContainer: (formData) => api.post('/vision/detect-container', formData),
+}
+
 export const usersApi = {
   personnel: () => api.get('/users/personnel'),
 }

@@ -41,30 +41,51 @@ const upload = multer({
   },
 });
 
+const visionUpload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+  },
+});
+
+const handleUploadError = (res, error) => {
+  if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({
+      status  : 'error',
+      message : 'Image trop lourde. Taille maximale autorisee : 5 MB.',
+    });
+  }
+
+  if (error.message === 'INVALID_IMAGE_TYPE') {
+    return res.status(400).json({
+      status  : 'error',
+      message : 'Format image invalide. Formats acceptes : JPEG, PNG ou WebP.',
+    });
+  }
+
+  console.error('[uploadMiddleware] Erreur upload image :', error.message);
+  return res.status(500).json({
+    status  : 'error',
+    message : 'Erreur interne du serveur lors de l upload image.',
+  });
+};
+
 const uploadContainerImage = (req, res, next) => {
   upload.single('image')(req, res, (error) => {
     if (!error) return next();
 
-    if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({
-        status  : 'error',
-        message : 'Image trop lourde. Taille maximale autorisee : 5 MB.',
-      });
-    }
-
-    if (error.message === 'INVALID_IMAGE_TYPE') {
-      return res.status(400).json({
-        status  : 'error',
-        message : 'Format image invalide. Formats acceptes : JPEG, PNG ou WebP.',
-      });
-    }
-
-    console.error('[uploadMiddleware] Erreur upload image :', error.message);
-    return res.status(500).json({
-      status  : 'error',
-      message : 'Erreur interne du serveur lors de l upload image.',
-    });
+    return handleUploadError(res, error);
   });
 };
 
-module.exports = { uploadContainerImage };
+const uploadVisionImage = (req, res, next) => {
+  // La Vision simulee utilise un stockage memoire pour ne pas polluer uploads/containers.
+  visionUpload.single('image')(req, res, (error) => {
+    if (!error) return next();
+
+    return handleUploadError(res, error);
+  });
+};
+
+module.exports = { uploadContainerImage, uploadVisionImage };

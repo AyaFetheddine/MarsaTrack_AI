@@ -1,9 +1,19 @@
-import { Boxes, ExternalLink, ImagePlus, LoaderCircle, Trash2, X } from 'lucide-react'
+import {
+  Boxes,
+  CheckCircle2,
+  ExternalLink,
+  ImagePlus,
+  LoaderCircle,
+  ScanLine,
+  Trash2,
+  X,
+} from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import {
   containersApi,
   getApiErrorMessage,
   operationsApi,
+  visionApi,
 } from '../api/api'
 import ConfirmDialog from '../components/ConfirmDialog'
 import CustomSelect from '../components/CustomSelect'
@@ -61,9 +71,12 @@ function Containers() {
   const [selectedImage, setSelectedImage] = useState(null)
   const [previewUrl, setPreviewUrl] = useState('')
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
+  const [visionResult, setVisionResult] = useState(null)
+  const [analyzingImage, setAnalyzingImage] = useState(false)
   const operationRef = useRef(null)
   const mouvementRef = useRef(null)
   const matriculeIsoRef = useRef(null)
+  const formSectionRef = useRef(null)
   const imageBlockRef = useRef(null)
   const imageInputRef = useRef(null)
   const imageUrlRef = useRef(null)
@@ -170,12 +183,14 @@ function Containers() {
 
     setSelectedImage(file)
     setPreviewUrl(URL.createObjectURL(file))
+    setVisionResult(null)
     setFormErrors((current) => ({ ...current, image: '', image_url: '' }))
   }
 
   const removeSelectedImage = () => {
     setSelectedImage(null)
     setIsPreviewOpen(false)
+    setVisionResult(null)
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl)
     }
@@ -184,6 +199,39 @@ function Containers() {
 
     if (imageInputRef.current) {
       imageInputRef.current.value = ''
+    }
+  }
+
+  const handleAnalyzeImage = async () => {
+    if (!selectedImage) return
+
+    setFeedback(null)
+    setAnalyzingImage(true)
+
+    try {
+      const formData = new FormData()
+      formData.append('image', selectedImage)
+
+      const response = await visionApi.detectContainer(formData)
+      const result = response.data.data || response.data
+
+      setVisionResult(result)
+      setForm((current) => ({
+        ...current,
+        matricule_iso: result.detected_iso || current.matricule_iso,
+      }))
+      setFormErrors((current) => ({ ...current, matricule_iso: '' }))
+    } catch (requestError) {
+      setVisionResult(null)
+      setFeedback({
+        type: 'error',
+        message: getApiErrorMessage(
+          requestError,
+          'Impossible d analyser l image. Vous pouvez saisir le matricule manuellement.',
+        ),
+      })
+    } finally {
+      setAnalyzingImage(false)
     }
   }
 
@@ -245,6 +293,16 @@ function Containers() {
       setFormErrors({})
       removeSelectedImage()
       await refreshContainers()
+      setTimeout(() => {
+        formSectionRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        })
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth',
+        })
+      }, 80)
       setFeedback({
         type: 'success',
         message: 'Conteneur saisi avec succès.',
@@ -308,7 +366,7 @@ function Containers() {
       )}
 
       {canCreateContainer ? (
-        <section className="page-card">
+        <section ref={formSectionRef} className="page-card">
           <div className="mb-5">
             <h3 className="font-bold text-marsa-royal">Saisir un conteneur</h3>
             <p className="mt-1 text-sm text-marsa-muted">
@@ -412,6 +470,19 @@ function Containers() {
                         >
                           Voir en grand
                         </button>
+                        <button
+                          type="button"
+                          onClick={handleAnalyzeImage}
+                          disabled={analyzingImage}
+                          className="inline-flex min-h-9 items-center gap-2 rounded-md border border-marsa-royal bg-marsa-royal px-3 text-xs font-bold text-white shadow-sm transition hover:bg-[#002f6c] disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                          {analyzingImage ? (
+                            <LoaderCircle size={15} className="animate-spin" />
+                          ) : (
+                            <ScanLine size={15} />
+                          )}
+                          {analyzingImage ? 'Analyse...' : "Analyser l'image"}
+                        </button>
                         <label
                           htmlFor="container-image"
                           className="inline-flex min-h-9 cursor-pointer items-center rounded-md border border-[#c8d8e8] bg-white px-3 text-xs font-bold text-marsa-royal shadow-sm transition hover:border-marsa-royal hover:bg-[#eef5fb]"
@@ -513,6 +584,66 @@ function Containers() {
                 )}
               </div>
 
+              {visionResult && (
+                <div className="rounded-md border border-[#d8e6f3] bg-[#f8fbff] p-4 shadow-sm">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold uppercase text-marsa-muted">
+                        Résultat IA
+                      </p>
+                      <p className="mt-1 text-2xl font-bold tracking-wide text-marsa-royal">
+                        {visionResult.detected_iso}
+                      </p>
+                    </div>
+                    <span
+                      className={`inline-flex min-h-8 items-center gap-1.5 rounded-full px-3 text-xs font-bold ${
+                        visionResult.is_valid_iso
+                          ? 'bg-[#dcfce7] text-[#047857]'
+                          : 'bg-[#fee2e2] text-[#b91c1c]'
+                      }`}
+                    >
+                      <CheckCircle2 size={15} />
+                      {visionResult.is_valid_iso
+                        ? 'Code ISO valide'
+                        : 'Code ISO invalide'}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-5">
+                    <div className="rounded-md bg-white p-3">
+                      <p className="text-xs text-marsa-muted">Confiance</p>
+                      <p className="mt-1 font-bold text-marsa-royal">
+                        {Math.round((visionResult.confidence || 0) * 100)} %
+                      </p>
+                    </div>
+                    <div className="rounded-md bg-white p-3">
+                      <p className="text-xs text-marsa-muted">Propriétaire</p>
+                      <p className="mt-1 font-bold text-marsa-royal">
+                        {visionResult.owner_code}
+                      </p>
+                    </div>
+                    <div className="rounded-md bg-white p-3">
+                      <p className="text-xs text-marsa-muted">Catégorie</p>
+                      <p className="mt-1 font-bold text-marsa-royal">
+                        {visionResult.category}
+                      </p>
+                    </div>
+                    <div className="rounded-md bg-white p-3">
+                      <p className="text-xs text-marsa-muted">Numéro série</p>
+                      <p className="mt-1 font-bold text-marsa-royal">
+                        {visionResult.serial_number}
+                      </p>
+                    </div>
+                    <div className="rounded-md bg-white p-3">
+                      <p className="text-xs text-marsa-muted">Contrôle</p>
+                      <p className="mt-1 font-bold text-marsa-royal">
+                        {visionResult.check_digit}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="hidden">
                 <label className="form-label" htmlFor="image_url">
                   URL image (optionnel)
@@ -538,8 +669,8 @@ function Containers() {
               </div>
 
               <div className="rounded-md border border-[#d8e6f3] bg-white px-4 py-3 text-sm text-marsa-muted">
-                <span className="font-bold text-marsa-royal">Détection IA : à venir.</span>{' '}
-                YOLO/OCR sera utilisé plus tard pour proposer automatiquement l'ID du conteneur à partir de l'image.
+                <span className="font-bold text-marsa-royal">Vision IA simulée.</span>{' '}
+                Le bouton d'analyse prépare le futur flux YOLO/OCR et propose un matricule ISO modifiable avant enregistrement.
               </div>
 
               <button

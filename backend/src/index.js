@@ -15,6 +15,7 @@ const arretRoutes     = require('./routes/arretRoutes');
 const containerRoutes = require('./routes/containerRoutes');
 const userRoutes      = require('./routes/userRoutes');
 const personnelRoutes = require('./routes/personnelRoutes');
+const visionRoutes    = require('./routes/visionRoutes');
 
 // ─── Initialisation de l'application Express ────────────────────────────────
 const app = express();
@@ -44,6 +45,9 @@ app.use('/api/arrets', arretRoutes);
 
 // Module de gestion des conteneurs saisis par les portiqueurs
 app.use('/api/containers', containerRoutes);
+
+// Module Vision IA simule pour preparer le flux YOLO/OCR
+app.use('/api/vision', visionRoutes);
 
 // Module de consultation des utilisateurs et du personnel terrain
 app.use('/api/users', userRoutes);
