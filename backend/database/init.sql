@@ -215,6 +215,10 @@ CREATE TABLE IF NOT EXISTS container (
                     COMMENT 'Chemin relatif ou URL S3 de la photo source',
   mouvement         ENUM('IMPORT', 'EXPORT') NOT NULL DEFAULT 'IMPORT'
                     COMMENT 'IMPORT : navire vers terminal, EXPORT : terminal vers navire',
+  detected_iso      VARCHAR(20)    NULL
+                    COMMENT 'Matricule ISO propose par le flux Vision IA avant validation terrain',
+  detection_source  ENUM('MANUELLE', 'IA_VALIDEE', 'IA_CORRIGEE') NOT NULL DEFAULT 'MANUELLE'
+                    COMMENT 'Origine de la saisie finale : manuelle, IA validee ou IA corrigee',
   ai_confidence     FLOAT          NULL
                     COMMENT 'Score de confiance YOLOv11 (0.0 à 1.0)',
   created_by        INT UNSIGNED   NULL

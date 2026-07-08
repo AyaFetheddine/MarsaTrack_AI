@@ -55,6 +55,48 @@ const resolveImageUrl = (imageUrl) => {
   return `${BACKEND_BASE_URL}${imageUrl}`
 }
 
+const normalizeIso = (value = '') => value.trim().toUpperCase()
+
+const getDetectionTrace = (matriculeIso, visionResult) => {
+  if (!visionResult?.detected_iso) {
+    return {
+      source: 'MANUELLE',
+      detectedIso: null,
+      confidence: null,
+      isCorrection: false,
+    }
+  }
+
+  const detectedIso = normalizeIso(visionResult.detected_iso)
+  const finalIso = normalizeIso(matriculeIso)
+  const isCorrection = Boolean(finalIso && finalIso !== detectedIso)
+
+  return {
+    source: isCorrection ? 'IA_CORRIGEE' : 'IA_VALIDEE',
+    detectedIso,
+    confidence: visionResult.confidence ?? null,
+    isCorrection,
+  }
+}
+
+const detectionSourceLabels = {
+  MANUELLE: 'Manuelle',
+  IA_VALIDEE: 'IA validée',
+  IA_CORRIGEE: 'IA corrigée',
+}
+
+const detectionSourceClasses = {
+  MANUELLE: 'bg-[#eef2f7] text-[#486581]',
+  IA_VALIDEE: 'bg-[#dcfce7] text-[#047857]',
+  IA_CORRIGEE: 'bg-[#fef3c7] text-[#a16207]',
+}
+
+const getDetectionSourceLabel = (source) =>
+  detectionSourceLabels[source] || detectionSourceLabels.MANUELLE
+
+const getDetectionSourceClass = (source) =>
+  detectionSourceClasses[source] || detectionSourceClasses.MANUELLE
+
 function Containers() {
   const role = getStoredRole()
   const canCreateContainer = ['Admin', 'Portiqueur'].includes(role)
@@ -285,6 +327,16 @@ function Containers() {
       formData.append('operation_id', form.operation_id)
       formData.append('mouvement', form.mouvement)
       formData.append('matricule_iso', form.matricule_iso)
+      const detectionTrace = getDetectionTrace(form.matricule_iso, visionResult)
+      formData.append('detection_source', detectionTrace.source)
+
+      if (detectionTrace.detectedIso) {
+        formData.append('detected_iso', detectionTrace.detectedIso)
+      }
+
+      if (detectionTrace.confidence !== null) {
+        formData.append('ai_confidence', detectionTrace.confidence)
+      }
 
       formData.append('image', selectedImage)
 
@@ -347,6 +399,8 @@ function Containers() {
       setDeletingId(null)
     }
   }
+
+  const currentDetectionTrace = getDetectionTrace(form.matricule_iso, visionResult)
 
   return (
     <div className="space-y-6">
@@ -589,11 +643,18 @@ function Containers() {
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="text-xs font-bold uppercase text-marsa-muted">
-                        Résultat IA
+                        {currentDetectionTrace.isCorrection
+                          ? 'Résultat IA corrigé manuellement'
+                          : 'Résultat IA validé'}
                       </p>
                       <p className="mt-1 text-2xl font-bold tracking-wide text-marsa-royal">
                         {visionResult.detected_iso}
                       </p>
+                      {currentDetectionTrace.isCorrection && (
+                        <p className="mt-1 text-xs font-semibold text-[#a16207]">
+                          Matricule final : {normalizeIso(form.matricule_iso)}
+                        </p>
+                      )}
                     </div>
                     <span
                       className={`inline-flex min-h-8 items-center gap-1.5 rounded-full px-3 text-xs font-bold ${
@@ -723,13 +784,14 @@ function Containers() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="data-table min-w-[1180px]">
+            <table className="data-table min-w-[1280px]">
               <thead>
                 <tr>
                   <th>Matricule ISO</th>
                   <th>Mouvement</th>
                   <th>Opération</th>
                   <th>Image</th>
+                  <th>Source</th>
                   <th>Confiance IA</th>
                   <th>Saisi par</th>
                   <th>Date</th>
@@ -760,6 +822,21 @@ function Containers() {
                       ) : (
                         '-'
                       )}
+                    </td>
+                    <td>
+                      <span
+                        className={`inline-flex min-h-7 items-center rounded-full px-3 text-xs font-bold ${getDetectionSourceClass(
+                          container.detection_source,
+                        )}`}
+                      >
+                        {getDetectionSourceLabel(container.detection_source)}
+                      </span>
+                      {container.detection_source === 'IA_CORRIGEE' &&
+                        container.detected_iso && (
+                          <p className="mt-1 text-xs text-marsa-muted">
+                            Détecté : {container.detected_iso}
+                          </p>
+                        )}
                     </td>
                     <td>
                       {container.ai_confidence === null
