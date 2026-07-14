@@ -1,0 +1,8 @@
+# Adapter ce chemin dans Kaggle selon l'emplacement reel du dataset importe.
+path: /kaggle/working/container-code-dataset
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: container_code

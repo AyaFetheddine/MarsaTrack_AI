@@ -95,3 +95,27 @@ runs/
 vision-service/.venv/
 __pycache__/
 .pytest_cache/
+
+# Vision training / YOLO datasets and generated outputs
+vision-training/dataset/*
+!vision-training/dataset/.gitkeep
+!vision-training/dataset/images/
+!vision-training/dataset/images/.gitkeep
+!vision-training/dataset/images/train/
+!vision-training/dataset/images/train/.gitkeep
+!vision-training/dataset/images/val/
+!vision-training/dataset/images/val/.gitkeep
+!vision-training/dataset/images/test/
+!vision-training/dataset/images/test/.gitkeep
+!vision-training/dataset/labels/
+!vision-training/dataset/labels/.gitkeep
+!vision-training/dataset/labels/train/
+!vision-training/dataset/labels/train/.gitkeep
+!vision-training/dataset/labels/val/
+!vision-training/dataset/labels/val/.gitkeep
+!vision-training/dataset/labels/test/
+!vision-training/dataset/labels/test/.gitkeep
+vision-training/results/*
+!vision-training/results/.gitkeep
+vision-training/models/*
+!vision-training/models/.gitkeep
