@@ -1,27 +1,17 @@
 const {
   validateContainerCode,
 } = require('../utils/iso6346');
+const { detectContainerFromImage } = require('../services/visionService');
 
 const SIMULATED_DETECTED_ISO = 'MRKU6234191';
 
-/**
- * Controleur : detectContainer
- * Route : POST /api/vision/detect-container
- *
- * Simule une detection OCR/YOLO du matricule conteneur depuis une image.
- * Aucune donnee n'est enregistree a cette etape.
- */
-const detectContainer = (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({
-      status  : 'error',
-      message : 'Veuillez importer une image du conteneur a analyser.',
-    });
-  }
+const isFallbackEnabled = () =>
+  String(process.env.VISION_FALLBACK_ENABLED ?? 'true').toLowerCase() === 'true';
 
+const buildMockDetectionResult = (detectionMode = 'fallback_mock') => {
   const validation = validateContainerCode(SIMULATED_DETECTED_ISO);
 
-  return res.status(200).json({
+  return {
     detected_iso         : validation.normalized,
     confidence           : 0.60,
     is_valid_iso         : validation.isValid,
@@ -32,8 +22,56 @@ const detectContainer = (req, res) => {
     serial_number        : validation.serialNumber,
     check_digit          : validation.checkDigit,
     expected_check_digit : validation.expectedCheckDigit,
-    message              : 'Detection simulee reussie.',
-  });
+    detection_mode       : detectionMode,
+    message              : detectionMode === 'fallback_mock'
+      ? 'Service Vision indisponible. Resultat simule de secours.'
+      : 'Detection simulee reussie.',
+  };
+};
+
+/**
+ * Controleur : detectContainer
+ * Route : POST /api/vision/detect-container
+ *
+ * Relaie l'image au microservice Python Vision.
+ * Aucune donnee n'est enregistree a cette etape.
+ */
+const detectContainer = async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({
+      status  : 'error',
+      message : 'Veuillez importer une image du conteneur a analyser.',
+    });
+  }
+
+  try {
+    const response = await detectContainerFromImage(req.file);
+    return res.status(200).json(response);
+  } catch (error) {
+    const isClientVisionError = error.statusCode >= 400 && error.statusCode < 500;
+
+    if (isClientVisionError && error.payload) {
+      return res.status(error.statusCode).json(error.payload);
+    }
+
+    if (isFallbackEnabled()) {
+      console.warn(
+        '[visionController] Service Vision indisponible, fallback mock utilise :',
+        error.message,
+      );
+
+      return res.status(200).json({
+        status: 'success',
+        data  : buildMockDetectionResult('fallback_mock'),
+      });
+    }
+
+    console.error('[visionController] Service Vision indisponible :', error.message);
+    return res.status(503).json({
+      status  : 'error',
+      message : 'Le service Vision IA est temporairement indisponible. Vous pouvez saisir le matricule manuellement.',
+    });
+  }
 };
 
 module.exports = { detectContainer };

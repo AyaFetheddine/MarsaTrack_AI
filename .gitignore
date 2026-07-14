@@ -86,3 +86,12 @@ coverage/
 *.tmp
 *.temp
 test-artifacts/
+
+# Vision IA / modeles et datasets locaux
+*.pt
+*.onnx
+datasets/
+runs/
+vision-service/.venv/
+__pycache__/
+.pytest_cache/

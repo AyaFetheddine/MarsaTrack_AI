@@ -184,6 +184,19 @@ const getVisionValidationClass = (result) => {
   return 'bg-[#fee2e2] text-[#b91c1c]'
 }
 
+const getDetectionModeLabel = (mode) => {
+  if (mode === 'mock') return 'Mode de demonstration'
+  if (mode === 'fallback_mock') return 'Service IA indisponible - resultat de secours'
+  if (mode === 'yolo_ocr') return 'Analyse YOLO + OCR'
+  return null
+}
+
+const getDetectionModeClass = (mode) => {
+  if (mode === 'fallback_mock') return 'border-[#facc15] bg-[#fffbeb] text-[#a16207]'
+  if (mode === 'yolo_ocr') return 'border-[#bbf7d0] bg-[#f0fdf4] text-[#047857]'
+  return 'border-[#d8e6f3] bg-white text-marsa-muted'
+}
+
 function Containers() {
   const role = getStoredRole()
   const canCreateContainer = ['Admin', 'Portiqueur'].includes(role)
@@ -747,6 +760,15 @@ function Containers() {
                         <p className="mt-1 text-xs font-semibold text-[#a16207]">
                           Matricule final : {normalizeIso(form.matricule_iso)}
                         </p>
+                      )}
+                      {getDetectionModeLabel(visionResult.detection_mode) && (
+                        <span
+                          className={`mt-3 inline-flex rounded-full border px-3 py-1 text-xs font-bold ${getDetectionModeClass(
+                            visionResult.detection_mode,
+                          )}`}
+                        >
+                          {getDetectionModeLabel(visionResult.detection_mode)}
+                        </span>
                       )}
                     </div>
                     <span
