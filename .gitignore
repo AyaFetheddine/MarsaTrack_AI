@@ -88,6 +88,8 @@ coverage/
 test-artifacts/
 
 # Vision IA / modeles et datasets locaux
+vision-service/models/*.pt
+vision-service/models/*.onnx
 *.pt
 *.onnx
 datasets/

@@ -37,7 +37,7 @@ def normalize_container_code(code: str | None) -> str:
     if not isinstance(code, str):
         return ""
 
-    return re.sub(r"[\s-]", "", code).upper()
+    return re.sub(r"[^A-Z0-9]", "", code.upper())
 
 
 def parse_container_code(code: str | None) -> dict:

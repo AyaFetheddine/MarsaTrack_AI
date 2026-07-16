@@ -8,7 +8,7 @@ const router = express.Router();
 
 /**
  * POST /api/vision/detect-container
- * Simule l'analyse Vision IA d'une image conteneur.
+ * Analyse une image via YOLO + OCR, avec fallback technique configurable.
  * Reserve aux roles : Admin, Portiqueur.
  */
 router.post(

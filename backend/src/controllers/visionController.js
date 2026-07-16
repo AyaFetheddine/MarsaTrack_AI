@@ -14,6 +14,9 @@ const buildMockDetectionResult = (detectionMode = 'fallback_mock') => {
   return {
     detected_iso         : validation.normalized,
     confidence           : 0.60,
+    raw_ocr_text         : null,
+    yolo_confidence      : null,
+    ocr_confidence       : null,
     is_valid_iso         : validation.isValid,
     is_valid_format      : validation.isValidFormat,
     is_valid_check_digit : validation.isValidCheckDigit,
@@ -23,6 +26,10 @@ const buildMockDetectionResult = (detectionMode = 'fallback_mock') => {
     check_digit          : validation.checkDigit,
     expected_check_digit : validation.expectedCheckDigit,
     detection_mode       : detectionMode,
+    ocr_variant          : null,
+    bbox                 : null,
+    detections           : [],
+    warning              : 'Le microservice Vision IA est indisponible. Aucune detection reelle n a ete effectuee.',
     message              : detectionMode === 'fallback_mock'
       ? 'Service Vision indisponible. Resultat simule de secours.'
       : 'Detection simulee reussie.',
@@ -54,6 +61,8 @@ const detectContainer = async (req, res) => {
       return res.status(error.statusCode).json(error.payload);
     }
 
+    // Une reponse metier valide (no_detection, yolo_no_valid_iso, ocr_error)
+    // est retournee en HTTP 200 par FastAPI et n'arrive jamais dans ce bloc.
     if (isFallbackEnabled()) {
       console.warn(
         '[visionController] Service Vision indisponible, fallback mock utilise :',

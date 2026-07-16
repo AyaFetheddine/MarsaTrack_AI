@@ -1,12 +1,19 @@
 const DEFAULT_VISION_SERVICE_URL = 'http://localhost:8000';
-const VISION_TIMEOUT_MS = 15000;
+const DEFAULT_VISION_TIMEOUT_MS = 30000;
 
 const getVisionServiceUrl = () =>
   (process.env.VISION_SERVICE_URL || DEFAULT_VISION_SERVICE_URL).replace(/\/$/, '');
 
+const getVisionTimeoutMs = () => {
+  const configuredTimeout = Number(process.env.VISION_TIMEOUT_MS);
+  return Number.isFinite(configuredTimeout) && configuredTimeout > 0
+    ? configuredTimeout
+    : DEFAULT_VISION_TIMEOUT_MS;
+};
+
 const createTimeoutSignal = () => {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), VISION_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), getVisionTimeoutMs());
 
   return {
     signal: controller.signal,
@@ -47,7 +54,21 @@ const detectContainerFromImage = async (file) => {
       throw error;
     }
 
+    if (!payload || typeof payload !== 'object') {
+      const error = new Error('Reponse invalide du service Vision IA.');
+      error.statusCode = 502;
+      throw error;
+    }
+
     return payload;
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      const timeoutError = new Error('Le service Vision IA a depasse le delai autorise.');
+      timeoutError.statusCode = 504;
+      timeoutError.cause = error;
+      throw timeoutError;
+    }
+    throw error;
   } finally {
     timeout.clear();
   }

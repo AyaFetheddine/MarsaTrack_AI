@@ -1,4 +1,5 @@
 import {
+  AlertCircle,
   Boxes,
   CheckCircle2,
   ExternalLink,
@@ -171,6 +172,7 @@ const getDetectionSourceClass = (source) =>
   detectionSourceClasses[source] || detectionSourceClasses.MANUELLE
 
 const getVisionValidationLabel = (result) => {
+  if (!result?.detected_iso) return 'Aucun code validé'
   if (!result?.is_valid_format) return 'Format ISO invalide'
   if (!result?.is_valid_check_digit) return 'Chiffre de contrôle invalide'
   return 'Code ISO valide'
@@ -185,15 +187,29 @@ const getVisionValidationClass = (result) => {
 }
 
 const getDetectionModeLabel = (mode) => {
-  if (mode === 'mock') return 'Mode de demonstration'
-  if (mode === 'fallback_mock') return 'Service IA indisponible - resultat de secours'
-  if (mode === 'yolo_ocr') return 'Analyse YOLO + OCR'
-  return null
+  const labels = {
+    mock: 'Mode de démonstration',
+    fallback_mock: 'Service IA indisponible - résultat de secours',
+    yolo_ocr: 'Analyse YOLO + OCR',
+    yolo_paddleocr: 'YOLO + PaddleOCR',
+    yolo_no_valid_iso: 'OCR à corriger',
+    yolo_only: 'Détection YOLO uniquement',
+    no_detection: 'Aucune zone détectée',
+    ocr_disabled: 'OCR désactivé',
+    ocr_error: 'Erreur OCR',
+    model_unavailable: 'Modèle indisponible',
+  }
+  return labels[mode] || mode || null
 }
 
 const getDetectionModeClass = (mode) => {
   if (mode === 'fallback_mock') return 'border-[#facc15] bg-[#fffbeb] text-[#a16207]'
-  if (mode === 'yolo_ocr') return 'border-[#bbf7d0] bg-[#f0fdf4] text-[#047857]'
+  if (['yolo_ocr', 'yolo_paddleocr'].includes(mode)) {
+    return 'border-[#bbf7d0] bg-[#f0fdf4] text-[#047857]'
+  }
+  if (['no_detection', 'yolo_no_valid_iso', 'ocr_error', 'ocr_disabled'].includes(mode)) {
+    return 'border-[#facc15] bg-[#fffbeb] text-[#a16207]'
+  }
   return 'border-[#d8e6f3] bg-white text-marsa-muted'
 }
 
@@ -749,13 +765,22 @@ function Containers() {
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="text-xs font-bold uppercase text-marsa-muted">
-                        {currentDetectionTrace.isCorrection
+                        {!visionResult.detected_iso
+                          ? 'Résultat de l’analyse'
+                          : currentDetectionTrace.isCorrection
                           ? 'Résultat IA corrigé manuellement'
                           : 'Résultat IA validé'}
                       </p>
                       <p className="mt-1 text-2xl font-bold tracking-wide text-marsa-royal">
-                        {visionResult.detected_iso}
+                        {visionResult.detected_iso || 'Aucun code ISO détecté'}
                       </p>
+                      {visionResult.raw_ocr_text &&
+                        normalizeIso(visionResult.raw_ocr_text) !==
+                          normalizeIso(visionResult.detected_iso) && (
+                          <p className="mt-1 text-xs text-marsa-muted">
+                            Texte OCR brut : {visionResult.raw_ocr_text}
+                          </p>
+                        )}
                       {currentDetectionTrace.isCorrection && (
                         <p className="mt-1 text-xs font-semibold text-[#a16207]">
                           Matricule final : {normalizeIso(form.matricule_iso)}
@@ -776,10 +801,26 @@ function Containers() {
                         visionResult,
                       )}`}
                     >
-                      <CheckCircle2 size={15} />
+                      {visionResult.is_valid_iso ? (
+                        <CheckCircle2 size={15} />
+                      ) : (
+                        <AlertCircle size={15} />
+                      )}
                       {getVisionValidationLabel(visionResult)}
                     </span>
                   </div>
+
+                  {visionResult.message && (
+                    <p className="mt-3 rounded-md border border-[#d8e6f3] bg-white px-3 py-2 text-sm text-marsa-text">
+                      {visionResult.message}
+                    </p>
+                  )}
+
+                  {visionResult.warning && (
+                    <p className="mt-3 rounded-md border border-[#fde68a] bg-[#fffbeb] px-3 py-2 text-xs font-semibold text-[#a16207]">
+                      {visionResult.warning}
+                    </p>
+                  )}
 
                   {!visionResult.is_valid_check_digit &&
                     visionResult.expected_check_digit && (
@@ -788,35 +829,57 @@ function Containers() {
                       </p>
                     )}
 
-                  <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-5">
+                  <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
                     <div className="rounded-md bg-white p-3">
-                      <p className="text-xs text-marsa-muted">Confiance</p>
+                      <p className="text-xs text-marsa-muted">Confiance globale</p>
                       <p className="mt-1 font-bold text-marsa-royal">
                         {Math.round((visionResult.confidence || 0) * 100)} %
                       </p>
                     </div>
                     <div className="rounded-md bg-white p-3">
+                      <p className="text-xs text-marsa-muted">Confiance YOLO</p>
+                      <p className="mt-1 font-bold text-marsa-royal">
+                        {visionResult.yolo_confidence == null
+                          ? '-'
+                          : `${Math.round(visionResult.yolo_confidence * 100)} %`}
+                      </p>
+                    </div>
+                    <div className="rounded-md bg-white p-3">
+                      <p className="text-xs text-marsa-muted">Confiance OCR</p>
+                      <p className="mt-1 font-bold text-marsa-royal">
+                        {visionResult.ocr_confidence == null
+                          ? '-'
+                          : `${Math.round(visionResult.ocr_confidence * 100)} %`}
+                      </p>
+                    </div>
+                    <div className="rounded-md bg-white p-3">
+                      <p className="text-xs text-marsa-muted">Variante OCR</p>
+                      <p className="mt-1 font-bold text-marsa-royal">
+                        {visionResult.ocr_variant || '-'}
+                      </p>
+                    </div>
+                    <div className="rounded-md bg-white p-3">
                       <p className="text-xs text-marsa-muted">Propriétaire</p>
                       <p className="mt-1 font-bold text-marsa-royal">
-                        {visionResult.owner_code}
+                        {visionResult.owner_code || '-'}
                       </p>
                     </div>
                     <div className="rounded-md bg-white p-3">
                       <p className="text-xs text-marsa-muted">Catégorie</p>
                       <p className="mt-1 font-bold text-marsa-royal">
-                        {visionResult.category}
+                        {visionResult.category || '-'}
                       </p>
                     </div>
                     <div className="rounded-md bg-white p-3">
                       <p className="text-xs text-marsa-muted">Numéro série</p>
                       <p className="mt-1 font-bold text-marsa-royal">
-                        {visionResult.serial_number}
+                        {visionResult.serial_number || '-'}
                       </p>
                     </div>
                     <div className="rounded-md bg-white p-3">
                       <p className="text-xs text-marsa-muted">Contrôle</p>
                       <p className="mt-1 font-bold text-marsa-royal">
-                        {visionResult.check_digit}
+                        {visionResult.check_digit || '-'}
                       </p>
                     </div>
                   </div>
@@ -848,8 +911,8 @@ function Containers() {
               </div>
 
               <div className="rounded-md border border-[#d8e6f3] bg-white px-4 py-3 text-sm text-marsa-muted">
-                <span className="font-bold text-marsa-royal">Vision IA simulée.</span>{' '}
-                Le bouton d'analyse prépare le futur flux YOLO/OCR et propose un matricule ISO modifiable avant enregistrement.
+                <span className="font-bold text-marsa-royal">Vision IA.</span>{' '}
+                YOLO localise la zone du code, PaddleOCR lit les caractères et la validation ISO 6346 contrôle le résultat. Le matricule reste modifiable.
               </div>
 
               <button
