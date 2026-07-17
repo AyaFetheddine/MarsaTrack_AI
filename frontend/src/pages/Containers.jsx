@@ -1,6 +1,7 @@
 import {
   AlertCircle,
   Boxes,
+  Camera,
   CheckCircle2,
   ExternalLink,
   ImagePlus,
@@ -17,10 +18,12 @@ import {
   visionApi,
 } from '../api/api'
 import ConfirmDialog from '../components/ConfirmDialog'
+import CameraCapture from '../components/CameraCapture'
 import CustomSelect from '../components/CustomSelect'
 import Loader from '../components/Loader'
 import StatusBadge from '../components/StatusBadge'
 import ToastMessage from '../components/ToastMessage'
+import VisionResultBoundary from '../components/VisionResultBoundary'
 import useAutoClearMessage from '../hooks/useAutoClearMessage'
 import { getStoredRole } from '../utils/auth'
 import { fieldErrorClass, scrollToFirstError } from '../utils/formValidation'
@@ -85,10 +88,46 @@ const resolveImageUrl = (imageUrl) => {
   return `${BACKEND_BASE_URL}${imageUrl}`
 }
 
-const normalizeIso = (value = '') => value.replace(/[\s-]/g, '').toUpperCase()
+const normalizeIso = (value = '') => String(value ?? '').replace(/[\s-]/g, '').toUpperCase()
 
 const normalizeContainerCode = (value = '') =>
-  value.replace(/[\s-]/g, '').toUpperCase()
+  String(value ?? '').replace(/[\s-]/g, '').toUpperCase()
+
+const normalizeVisionResult = (result) => {
+  if (!result || typeof result !== 'object' || Array.isArray(result)) {
+    throw new Error('Le service Vision IA a retourne une reponse invalide.')
+  }
+
+  const numericFields = ['confidence', 'yolo_confidence', 'ocr_confidence']
+  const normalizedResult = { ...result }
+
+  numericFields.forEach((field) => {
+    if (normalizedResult[field] == null || normalizedResult[field] === '') return
+
+    const numericValue = Number(normalizedResult[field])
+    normalizedResult[field] = Number.isFinite(numericValue) ? numericValue : null
+  })
+
+  ;[
+    'detected_iso',
+    'raw_ocr_text',
+    'owner_code',
+    'category',
+    'serial_number',
+    'check_digit',
+    'expected_check_digit',
+    'detection_mode',
+    'ocr_variant',
+    'message',
+    'warning',
+  ].forEach((field) => {
+    if (normalizedResult[field] != null && typeof normalizedResult[field] !== 'string') {
+      normalizedResult[field] = String(normalizedResult[field])
+    }
+  })
+
+  return normalizedResult
+}
 
 const calculateIsoCheckDigit = (codeWithoutCheckDigit) => {
   const normalized = normalizeContainerCode(codeWithoutCheckDigit)
@@ -228,6 +267,7 @@ function Containers() {
   const [formErrors, setFormErrors] = useState({})
   const [selectedImage, setSelectedImage] = useState(null)
   const [previewUrl, setPreviewUrl] = useState('')
+  const [isCameraOpen, setIsCameraOpen] = useState(false)
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [visionResult, setVisionResult] = useState(null)
   const [analyzingImage, setAnalyzingImage] = useState(false)
@@ -302,10 +342,8 @@ function Containers() {
     setFormErrors((current) => ({ ...current, [name]: '' }))
   }
 
-  const handleImageChange = (event) => {
-    const file = event.target.files?.[0]
-
-    if (!file) return
+  const selectImage = (file, input) => {
+    if (!file) return false
 
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
       setSelectedImage(null)
@@ -313,12 +351,12 @@ function Containers() {
         URL.revokeObjectURL(previewUrl)
       }
       setPreviewUrl('')
-      event.target.value = ''
+      if (input) input.value = ''
       setFormErrors((current) => ({
         ...current,
         image: 'Format image invalide. Formats acceptés : PNG, JPEG ou WebP.',
       }))
-      return
+      return false
     }
 
     if (file.size > 5 * 1024 * 1024) {
@@ -327,12 +365,12 @@ function Containers() {
         URL.revokeObjectURL(previewUrl)
       }
       setPreviewUrl('')
-      event.target.value = ''
+      if (input) input.value = ''
       setFormErrors((current) => ({
         ...current,
         image: 'Image trop lourde. Taille maximale autorisée : 5 MB.',
       }))
-      return
+      return false
     }
 
     if (previewUrl) {
@@ -343,6 +381,17 @@ function Containers() {
     setPreviewUrl(URL.createObjectURL(file))
     setVisionResult(null)
     setFormErrors((current) => ({ ...current, image: '', image_url: '' }))
+    return true
+  }
+
+  const handleImageChange = (event) => {
+    selectImage(event.target.files?.[0], event.target)
+  }
+
+  const handleCameraCapture = (file) => {
+    if (selectImage(file)) {
+      setIsCameraOpen(false)
+    }
   }
 
   const removeSelectedImage = () => {
@@ -371,7 +420,7 @@ function Containers() {
       formData.append('image', selectedImage)
 
       const response = await visionApi.detectContainer(formData)
-      const result = response.data.data || response.data
+      const result = normalizeVisionResult(response.data?.data ?? response.data)
 
       setVisionResult(result)
       setForm((current) => ({
@@ -667,6 +716,14 @@ function Containers() {
                         </label>
                         <button
                           type="button"
+                          onClick={() => setIsCameraOpen(true)}
+                          className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[#c8d8e8] bg-white px-3 text-xs font-bold text-marsa-royal shadow-sm transition hover:border-marsa-royal hover:bg-[#eef5fb]"
+                        >
+                          <Camera size={15} />
+                          Reprendre avec camera
+                        </button>
+                        <button
+                          type="button"
                           onClick={removeSelectedImage}
                           className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[#fecaca] bg-white px-3 text-xs font-bold text-[#b71c1c] shadow-sm transition hover:border-[#b91c1c] hover:bg-[#fff5f5]"
                         >
@@ -684,10 +741,7 @@ function Containers() {
                       </div>
                     </>
                   ) : (
-                    <label
-                      htmlFor="container-image"
-                      className="flex min-h-[320px] cursor-pointer flex-col items-center justify-center px-4 py-8 text-center"
-                    >
+                    <div className="flex min-h-[320px] flex-col items-center justify-center px-4 py-8 text-center">
                       <ImagePlus size={36} className="mb-4 text-marsa-ciel" />
                       <span className="text-base font-bold text-marsa-royal">
                         Importer une image
@@ -698,7 +752,24 @@ function Containers() {
                       <span className="mt-4 rounded-full bg-white px-4 py-2 text-xs font-semibold text-marsa-muted shadow-sm">
                         Cliquez pour sélectionner une image du conteneur
                       </span>
-                    </label>
+                      <div className="mt-5 flex flex-wrap justify-center gap-2">
+                        <label
+                          htmlFor="container-image"
+                          className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-md border border-marsa-royal bg-marsa-royal px-4 text-sm font-bold text-white shadow-sm transition hover:bg-[#002f6c]"
+                        >
+                          <ImagePlus size={16} />
+                          Importer une image
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setIsCameraOpen(true)}
+                          className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[#c8d8e8] bg-white px-4 text-sm font-bold text-marsa-royal shadow-sm transition hover:border-marsa-royal hover:bg-[#eef5fb]"
+                        >
+                          <Camera size={16} />
+                          Utiliser la camera
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
                 <div className="hidden">
@@ -761,7 +832,10 @@ function Containers() {
               </div>
 
               {visionResult && (
-                <div className="rounded-md border border-[#d8e6f3] bg-[#f8fbff] p-4 shadow-sm">
+                <VisionResultBoundary
+                  resetKey={`${visionResult.detected_iso || ''}-${visionResult.detection_mode || ''}`}
+                >
+                  <div className="rounded-md border border-[#d8e6f3] bg-[#f8fbff] p-4 shadow-sm">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="text-xs font-bold uppercase text-marsa-muted">
@@ -883,7 +957,8 @@ function Containers() {
                       </p>
                     </div>
                   </div>
-                </div>
+                  </div>
+                </VisionResultBoundary>
               )}
 
               <div className="hidden">
@@ -1085,6 +1160,13 @@ function Containers() {
             </div>
           </div>
         </div>
+      )}
+
+      {isCameraOpen && (
+        <CameraCapture
+          onClose={() => setIsCameraOpen(false)}
+          onUsePhoto={handleCameraCapture}
+        />
       )}
 
       {pendingDeleteContainer && (

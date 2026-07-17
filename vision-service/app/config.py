@@ -39,6 +39,12 @@ class VisionSettings:
     yolo_confidence: float = _as_float("VISION_YOLO_CONFIDENCE", 0.25)
     yolo_iou: float = _as_float("VISION_YOLO_IOU", 0.45)
     crop_margin_percent: float = _as_float("VISION_CROP_MARGIN_PERCENT", 0.04)
+    crop_context_horizontal_factor: float = _as_float(
+        "VISION_CROP_CONTEXT_HORIZONTAL_FACTOR", 1.25
+    )
+    crop_context_vertical_factor: float = _as_float(
+        "VISION_CROP_CONTEXT_VERTICAL_FACTOR", 0.75
+    )
     ocr_enabled: bool = _as_bool("VISION_OCR_ENABLED", True)
     ocr_engine: str = os.getenv("VISION_OCR_ENGINE", "paddleocr")
     fallback_enabled: bool = _as_bool("VISION_FALLBACK_ENABLED", True)

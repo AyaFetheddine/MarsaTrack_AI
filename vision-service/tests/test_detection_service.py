@@ -24,6 +24,8 @@ def fake_settings(tmp_path, **overrides):
         "yolo_confidence": 0.25,
         "yolo_iou": 0.45,
         "crop_margin_percent": 0.04,
+        "crop_context_horizontal_factor": 1.25,
+        "crop_context_vertical_factor": 0.75,
         "ocr_enabled": True,
         "ocr_engine": "paddleocr",
         "fallback_enabled": True,
@@ -162,6 +164,27 @@ def test_ocr_confusion_s_five():
 
 def test_ocr_invalid_text():
     assert service.select_best_iso_candidate([reading("HELLO PORT")]) is None
+
+
+def test_combined_ocr_fragments_form_a_valid_iso(monkeypatch):
+    monkeypatch.setattr(
+        service,
+        "_run_ocr",
+        lambda *_: [("BBCU", 0.99), ("217241", 0.99), ("8", 0.99)],
+    )
+    monkeypatch.setattr(service, "get_ocr_engine", lambda: object())
+    readings = service.recognize_container_code(Image.new("RGB", (160, 80)), 0)
+    assert service.select_best_iso_candidate(readings)["candidate"] == "BBCU2172418"
+
+
+def test_context_crop_expands_beyond_detected_box(monkeypatch, tmp_path):
+    monkeypatch.setattr(service, "settings", fake_settings(tmp_path))
+    image = Image.new("RGB", (400, 200))
+    crop = service.crop_detected_context(
+        image, {"x1": 160, "y1": 70, "x2": 240, "y2": 130}
+    )
+    assert crop.width > 80
+    assert crop.height > 60
 
 
 def test_wrong_check_digit_is_not_valid():

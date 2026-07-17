@@ -217,6 +217,22 @@ def crop_detected_region(image: Image.Image, bbox: dict) -> Image.Image:
     return image.crop((left, top, max(left + 1, right), max(top + 1, bottom)))
 
 
+def crop_detected_context(image: Image.Image, bbox: dict) -> Image.Image:
+    """Return a wider crop when the printed code is split around the detected box."""
+    width, height = image.size
+    box_width = max(1.0, bbox["x2"] - bbox["x1"])
+    box_height = max(1.0, bbox["y2"] - bbox["y1"])
+    horizontal_context = box_width * getattr(
+        settings, "crop_context_horizontal_factor", 1.25
+    )
+    vertical_context = box_height * getattr(settings, "crop_context_vertical_factor", 0.75)
+    left = max(0, int(bbox["x1"] - horizontal_context))
+    top = max(0, int(bbox["y1"] - vertical_context))
+    right = min(width, int(bbox["x2"] + horizontal_context))
+    bottom = min(height, int(bbox["y2"] + vertical_context))
+    return image.crop((left, top, max(left + 1, right), max(top + 1, bottom)))
+
+
 def generate_ocr_variants(crop: Image.Image, include_rotations: bool = False) -> list[tuple[str, Image.Image]]:
     upscaled = crop.resize((crop.width * 2, crop.height * 2), Image.Resampling.LANCZOS)
     gray = ImageOps.grayscale(upscaled)
@@ -290,22 +306,60 @@ def _run_ocr(engine: Any, image: Image.Image) -> list[tuple[str, float]]:
     return []
 
 
+def normalize_ocr_text(text: str | None) -> str:
+    return re.sub(r"[^A-Z0-9]", "", (text or "").upper())
+
+
+def _read_variant(
+    engine: Any, image: Image.Image, variant_name: str, detection_index: int
+) -> list[OcrReading]:
+    pairs = _run_ocr(engine, image)
+    readings = [
+        OcrReading(text, confidence, variant_name, detection_index)
+        for text, confidence in pairs
+    ]
+
+    # PaddleOCR can return the owner, serial number, and check digit separately.
+    if len(pairs) > 1:
+        combined_text = "".join(normalize_ocr_text(text) for text, _ in pairs)
+        if combined_text:
+            combined_confidence = min(confidence for _, confidence in pairs)
+            readings.append(
+                OcrReading(
+                    combined_text,
+                    combined_confidence,
+                    f"{variant_name}_combined",
+                    detection_index,
+                )
+            )
+    return readings
+
+
 def recognize_container_code(crop: Image.Image, detection_index: int) -> list[OcrReading]:
     engine = get_ocr_engine()
     readings: list[OcrReading] = []
     for variant_name, variant in generate_ocr_variants(crop):
-        for text, confidence in _run_ocr(engine, variant):
-            readings.append(OcrReading(text, confidence, variant_name, detection_index))
+        readings.extend(_read_variant(engine, variant, variant_name, detection_index))
 
     if not any(select_best_iso_candidate([reading]) for reading in readings):
         for variant_name, variant in generate_ocr_variants(crop, include_rotations=True)[-2:]:
-            for text, confidence in _run_ocr(engine, variant):
-                readings.append(OcrReading(text, confidence, variant_name, detection_index))
+            readings.extend(_read_variant(engine, variant, variant_name, detection_index))
     return readings
 
 
-def normalize_ocr_text(text: str | None) -> str:
-    return re.sub(r"[^A-Z0-9]", "", (text or "").upper())
+def recognize_region_with_context(
+    image: Image.Image, bbox: dict, detection_index: int
+) -> list[OcrReading]:
+    readings = recognize_container_code(crop_detected_region(image, bbox), detection_index)
+    if select_best_iso_candidate(readings):
+        return readings
+
+    context_readings = recognize_container_code(
+        crop_detected_context(image, bbox), detection_index
+    )
+    for reading in context_readings:
+        reading.variant = f"context_{reading.variant}"
+    return readings + context_readings
 
 
 LETTER_SUBSTITUTIONS = {"0": "O", "1": "I", "5": "S", "8": "B", "2": "Z", "6": "G"}
@@ -474,8 +528,7 @@ def detect_container(image_bytes: bytes) -> dict:
     ocr_error: str | None = None
     for index, region in enumerate(regions):
         try:
-            crop = crop_detected_region(image, region["bbox"])
-            region_readings = recognize_container_code(crop, index)
+            region_readings = recognize_region_with_context(image, region["bbox"], index)
             for reading in region_readings:
                 reading.yolo_confidence = region["yolo_confidence"]
             all_readings.extend(region_readings)

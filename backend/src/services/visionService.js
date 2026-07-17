@@ -1,5 +1,6 @@
 const DEFAULT_VISION_SERVICE_URL = 'http://localhost:8000';
-const DEFAULT_VISION_TIMEOUT_MS = 30000;
+// Le premier appel peut charger YOLO et PaddleOCR : il est plus long que les suivants.
+const DEFAULT_VISION_TIMEOUT_MS = 180000;
 
 const getVisionServiceUrl = () =>
   (process.env.VISION_SERVICE_URL || DEFAULT_VISION_SERVICE_URL).replace(/\/$/, '');
