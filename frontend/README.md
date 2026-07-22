@@ -1,16 +1,39 @@
-# React + Vite
+# MarsaTrack AI - Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Capture camera des conteneurs
 
-Currently, two official plugins are available:
+Le module Conteneurs permet au portiqueur d'importer une image ou de prendre une photo avant de lancer l'analyse Vision IA.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+### Utilisation sur ordinateur
 
-## React Compiler
+1. Ouvrir `http://localhost:5173` dans Edge ou Chrome.
+2. Se connecter avec un compte Portiqueur autorise.
+3. Dans Conteneurs, cliquer sur `Utiliser la camera`.
+4. Autoriser le navigateur a utiliser la camera.
+5. Placer le code ISO dans le cadre, prendre la photo, verifier la qualite puis choisir `Utiliser cette photo`.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Utilisation sur mobile
 
-## Expanding the ESLint configuration
+La capture fonctionne sur `localhost` pendant le developpement. Sur un telephone accedant au projet par une adresse reseau, le navigateur exige une connexion HTTPS pour donner acces a la camera.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Avant la capture, verifier que :
+
+- le code ISO est lisible et bien eclaire ;
+- les caracteres occupent une partie suffisante de l'image ;
+- les reflets et le flou sont limites ;
+- l'orientation horizontale ou verticale correspond au code visible.
+
+Le navigateur peut proposer plusieurs cameras. Le module privilegie la camera arriere lorsque le navigateur fournit cette information. Le flash et le zoom ne sont affiches que lorsqu'ils sont reels disponibles sur l'appareil.
+
+### Controle qualite local
+
+Avant d'envoyer une photo a l'analyse, le frontend verifie localement la resolution, la taille du fichier, la luminosite, le contraste et un indicateur simple de nettete. Les blocages imposent une nouvelle photo. Les avertissements laissent le choix au portiqueur lorsque le code reste lisible.
+
+### Verification technique
+
+```powershell
+cd frontend
+npm run lint
+npm run build
+npm run test:camera
+```

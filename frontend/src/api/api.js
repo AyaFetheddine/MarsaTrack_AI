@@ -54,6 +54,10 @@ export const visionApi = {
   detectContainer: (formData) => api.post('/vision/detect-container', formData),
 }
 
+export const dashboardApi = {
+  stats: () => api.get('/dashboard/stats'),
+}
+
 export const usersApi = {
   personnel: () => api.get('/users/personnel'),
 }

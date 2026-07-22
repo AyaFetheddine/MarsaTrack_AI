@@ -75,6 +75,12 @@ ehthumbs.db
 *.sublime-project
 *.sublime-workspace
 
+# -----------------------------------------------------------------------------
+# Identifiants de test locaux (dépôt public — ne JAMAIS versionner)
+# -----------------------------------------------------------------------------
+*.local.md
+COMPTES-TEST.local.md
+
 
 # -----------------------------------------------------------------------------
 # Divers

@@ -3,7 +3,6 @@ import {
   Boxes,
   Camera,
   CheckCircle2,
-  ExternalLink,
   ImagePlus,
   LoaderCircle,
   ScanLine,
@@ -19,6 +18,7 @@ import {
 } from '../api/api'
 import ConfirmDialog from '../components/ConfirmDialog'
 import CameraCapture from '../components/CameraCapture'
+import ContainerImageViewer from '../components/ContainerImageViewer'
 import CustomSelect from '../components/CustomSelect'
 import Loader from '../components/Loader'
 import StatusBadge from '../components/StatusBadge'
@@ -1040,7 +1040,7 @@ function Containers() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="data-table min-w-[1280px]">
+            <table className="data-table min-w-[1040px]">
               <thead>
                 <tr>
                   <th>Matricule ISO</th>
@@ -1050,7 +1050,7 @@ function Containers() {
                   <th>Source</th>
                   <th>Confiance IA</th>
                   <th>Saisi par</th>
-                  <th>Date</th>
+                  <th className="whitespace-nowrap">Date</th>
                   {canDeleteContainer && <th>Action</th>}
                 </tr>
               </thead>
@@ -1066,15 +1066,10 @@ function Containers() {
                     <td>{container.nom_operation}</td>
                     <td>
                       {resolveImageUrl(container.image_url) ? (
-                        <a
-                          href={resolveImageUrl(container.image_url)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 font-semibold text-marsa-ciel hover:text-marsa-royal"
-                        >
-                          Voir image
-                          <ExternalLink size={14} />
-                        </a>
+                        <ContainerImageViewer
+                          imageUrl={resolveImageUrl(container.image_url)}
+                          label={container.matricule_iso}
+                        />
                       ) : (
                         '-'
                       )}
@@ -1104,7 +1099,9 @@ function Containers() {
                         container.auteur_matricule ||
                         'Non renseigné'}
                     </td>
-                    <td>{formatDateTime(container.created_at)}</td>
+                    <td className="whitespace-nowrap">
+                      {formatDateTime(container.created_at)}
+                    </td>
                     {canDeleteContainer && (
                       <td>
                         <button

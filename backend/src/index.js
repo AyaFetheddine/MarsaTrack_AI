@@ -16,6 +16,7 @@ const containerRoutes = require('./routes/containerRoutes');
 const userRoutes      = require('./routes/userRoutes');
 const personnelRoutes = require('./routes/personnelRoutes');
 const visionRoutes    = require('./routes/visionRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
 
 // ─── Initialisation de l'application Express ────────────────────────────────
 const app = express();
@@ -54,6 +55,9 @@ app.use('/api/users', userRoutes);
 
 // Module de gestion du personnel operationnel affectable
 app.use('/api/personnel', personnelRoutes);
+
+// Vue synthetique du dashboard : compteurs agreges (tous roles authentifies)
+app.use('/api/dashboard', dashboardRoutes);
 
 /**
  * Health Check — GET /api/health

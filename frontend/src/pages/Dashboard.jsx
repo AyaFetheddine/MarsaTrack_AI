@@ -10,11 +10,10 @@ import {
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import {
-  arretsApi,
   containersApi,
+  dashboardApi,
   getApiErrorMessage,
   operationsApi,
-  personnelApi,
 } from '../api/api'
 import FeedbackMessage from '../components/FeedbackMessage'
 import Loader from '../components/Loader'
@@ -24,29 +23,20 @@ import { getStoredRole } from '../utils/auth'
 
 function Dashboard() {
   const role = getStoredRole()
-  const canViewArrets = [
-    'Admin',
-    'Responsable_Exploitation',
-    'Chef_Services',
-    'Chef_Escale',
-    'Chef_Equipe',
-  ].includes(role)
+  // Les conteneurs restent limites aux roles qui ont acces a la page dediee.
+  // Les compteurs « Arrets en cours » et « Personnel disponible » proviennent
+  // desormais d'un endpoint agrege (/api/dashboard/stats) accessible a tous
+  // les roles : on affiche le nombre reel sans exposer les listes detaillees.
   const canViewContainers = [
     'Admin',
     'Responsable_Exploitation',
     'Chef_Services',
     'Portiqueur',
   ].includes(role)
-  const canViewPersonnel = [
-    'Admin',
-    'Responsable_Exploitation',
-    'Chef_Services',
-    'Chef_Equipe',
-  ].includes(role)
+
   const [operations, setOperations] = useState([])
-  const [arrets, setArrets] = useState([])
   const [containers, setContainers] = useState([])
-  const [personnelCount, setPersonnelCount] = useState(null)
+  const [overview, setOverview] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -55,28 +45,16 @@ function Dashboard() {
   useEffect(() => {
     const loadDashboard = async () => {
       try {
-        const [
-          operationsResponse,
-          arretsResponse,
-          containersResponse,
-          personnelResponse,
-        ] = await Promise.all([
-          operationsApi.list(),
-          canViewArrets ? arretsApi.list() : Promise.resolve(null),
-          canViewContainers ? containersApi.list() : Promise.resolve(null),
-          canViewPersonnel ? personnelApi.list() : Promise.resolve(null),
-        ])
+        const [operationsResponse, containersResponse, statsResponse] =
+          await Promise.all([
+            operationsApi.list(),
+            canViewContainers ? containersApi.list() : Promise.resolve(null),
+            dashboardApi.stats(),
+          ])
 
         setOperations(operationsResponse.data.data || [])
-        setArrets(arretsResponse?.data.data || [])
         setContainers(containersResponse?.data.data || [])
-        setPersonnelCount(
-          personnelResponse
-            ? (personnelResponse.data.data || []).filter(
-                (person) => person.disponibilite === 'disponible',
-              ).length
-            : null,
-        )
+        setOverview(statsResponse.data.data || null)
       } catch (requestError) {
         setError(
           getApiErrorMessage(
@@ -90,7 +68,7 @@ function Dashboard() {
     }
 
     loadDashboard()
-  }, [canViewArrets, canViewContainers, canViewPersonnel])
+  }, [canViewContainers])
 
   const activeOperations = operations.filter(
     (operation) => operation.statut === 'en cours',
@@ -98,9 +76,6 @@ function Dashboard() {
   const closedOperations = operations.filter(
     (operation) => operation.statut === 'cloturee',
   ).length
-  const activeArrets = canViewArrets
-    ? arrets.filter((arret) => arret.statut === 'en cours').length
-    : '-'
   const importContainers = canViewContainers
     ? containers.filter(
         (container) => (container.mouvement || 'IMPORT') === 'IMPORT',
@@ -131,7 +106,7 @@ function Dashboard() {
     },
     {
       title: 'Arrêts en cours',
-      value: activeArrets,
+      value: overview?.arrets_en_cours ?? '-',
       icon: OctagonAlert,
       accentClass: 'bg-[#fff1e8] text-[#c45a12]',
     },
@@ -155,7 +130,7 @@ function Dashboard() {
     },
     {
       title: 'Personnel disponible',
-      value: canViewPersonnel ? personnelCount : '-',
+      value: overview?.personnel_disponible ?? '-',
       icon: HardHat,
       accentClass: 'bg-[#e7f7ef] text-[#148354]',
     },
