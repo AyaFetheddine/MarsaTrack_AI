@@ -101,7 +101,9 @@ class VisionSettings:
 
     ocr_enabled: bool = _as_bool("VISION_OCR_ENABLED", True)
     ocr_engine: str = os.getenv("VISION_OCR_ENGINE", "paddleocr")
-    fallback_enabled: bool = _as_bool("VISION_FALLBACK_ENABLED", True)
+    # Desactive par defaut : si le modele est indisponible, mieux vaut une erreur
+    # claire qu'un resultat simule (MRKU6234191) preremplissable par erreur.
+    fallback_enabled: bool = _as_bool("VISION_FALLBACK_ENABLED", False)
     max_image_size_mb: int = _as_int("VISION_MAX_IMAGE_SIZE_MB", 5)
 
     def _resolve(self, value: str) -> Path:

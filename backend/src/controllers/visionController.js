@@ -5,8 +5,11 @@ const { detectContainerFromImage } = require('../services/visionService');
 
 const SIMULATED_DETECTED_ISO = 'MRKU6234191';
 
+// Desactive par defaut : un resultat simule ne doit jamais etre servi sans une
+// activation explicite. Une panne Vision renvoie alors une erreur claire (503)
+// et l'utilisateur saisit le matricule manuellement.
 const isFallbackEnabled = () =>
-  String(process.env.VISION_FALLBACK_ENABLED ?? 'true').toLowerCase() === 'true';
+  String(process.env.VISION_FALLBACK_ENABLED ?? 'false').toLowerCase() === 'true';
 
 const buildMockDetectionResult = (detectionMode = 'fallback_mock') => {
   const validation = validateContainerCode(SIMULATED_DETECTED_ISO);

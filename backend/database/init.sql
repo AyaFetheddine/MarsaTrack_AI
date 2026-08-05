@@ -260,54 +260,54 @@ CREATE TABLE IF NOT EXISTS sessions_whatsapp (
 
 
 -- ============================================================
--- Données initiales : utilisateur administrateur de test
--- ⚠️  IMPORTANT : remplacer ce hash avant tout déploiement.
---    Hash bcrypt généré pour le mot de passe : ***REDACTED-TEST-PASSWORD***
---    Commande : node -e "const b=require('bcryptjs');
---               b.hash('***REDACTED-TEST-PASSWORD***',12).then(console.log)"
+-- Données initiales : comptes de test (hash bcrypt).
+-- ⚠️  IMPORTANT : remplacer ces hash avant tout déploiement.
+--    Le mot de passe de test N'EST PAS versionné : il se trouve uniquement
+--    dans COMPTES-TEST.local.md (gitignoré). Pour régénérer un hash :
+--      node -e "require('bcryptjs').hash(process.argv[1],12).then(console.log)" "<mot_de_passe>"
 -- ============================================================
 INSERT IGNORE INTO users (nom_complet, matricule, role, password_hash)
 VALUES (
   'Administrateur Système',
   'ADM-001',
   'Admin',
-  '***REDACTED-OLD-HASH***'
+  '$2b$12$gpNTik.jsRuPD37fDEG4TObAZLuNPkjyV3ZVgUkZGJ6aoo61Hi8me'
 );
 
--- Utilisateur de test avec droits de création d'opérations (mot de passe : ***REDACTED-TEST-PASSWORD***)
+-- Utilisateur de test avec droits de création d'opérations (mot de passe : voir COMPTES-TEST.local.md)
 INSERT IGNORE INTO users (nom_complet, matricule, role, password_hash)
 VALUES (
   'Responsable Exploitation Test',
   'RE-001',
   'Responsable_Exploitation',
-  '***REDACTED-OLD-HASH***'
+  '$2b$12$gpNTik.jsRuPD37fDEG4TObAZLuNPkjyV3ZVgUkZGJ6aoo61Hi8me'
 );
 
--- Utilisateur de test avec droits de crÃ©ation d'opÃ©rations (mot de passe : ***REDACTED-TEST-PASSWORD***)
+-- Utilisateur de test avec droits de création d'opérations (mot de passe : voir COMPTES-TEST.local.md)
 INSERT IGNORE INTO users (nom_complet, matricule, role, password_hash)
 VALUES (
   'Chef Equipe Test',
   'CE-001',
   'Chef_Equipe',
-  '***REDACTED-OLD-HASH***'
+  '$2b$12$gpNTik.jsRuPD37fDEG4TObAZLuNPkjyV3ZVgUkZGJ6aoo61Hi8me'
 );
 
--- Utilisateur de test avec droits de saisie des conteneurs (mot de passe : ***REDACTED-TEST-PASSWORD***)
+-- Utilisateur de test avec droits de saisie des conteneurs (mot de passe : voir COMPTES-TEST.local.md)
 INSERT IGNORE INTO users (nom_complet, matricule, role, password_hash)
 VALUES (
   'Portiqueur Test',
   'PQ-001',
   'Portiqueur',
-  '***REDACTED-OLD-HASH***'
+  '$2b$12$gpNTik.jsRuPD37fDEG4TObAZLuNPkjyV3ZVgUkZGJ6aoo61Hi8me'
 );
 
--- Utilisateur de test avec droits de cloture des operations (mot de passe : ***REDACTED-TEST-PASSWORD***)
+-- Utilisateur de test avec droits de cloture des operations (mot de passe : voir COMPTES-TEST.local.md)
 INSERT IGNORE INTO users (nom_complet, matricule, role, password_hash)
 VALUES (
   'Chef Services Test',
   'CS-001',
   'Chef_Services',
-  '***REDACTED-OLD-HASH***'
+  '$2b$12$gpNTik.jsRuPD37fDEG4TObAZLuNPkjyV3ZVgUkZGJ6aoo61Hi8me'
 );
 
 -- Personnel operationnel affectable de test

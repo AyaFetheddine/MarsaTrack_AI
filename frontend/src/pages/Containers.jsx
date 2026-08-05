@@ -190,8 +190,14 @@ const validateIso6346 = (value) => {
   }
 }
 
+// Un resultat de secours simule (service Vision indisponible) ne doit JAMAIS
+// preremplir un matricule ni etre enregistre comme une detection IA : c'est une
+// valeur fictive, pas une lecture reelle.
+const isSimulatedResult = (result) =>
+  result?.detection_mode === 'fallback_mock' || result?.detection_mode === 'mock'
+
 const getDetectionTrace = (matriculeIso, visionResult) => {
-  if (!visionResult?.detected_iso) {
+  if (!visionResult?.detected_iso || isSimulatedResult(visionResult)) {
     return {
       source: 'MANUELLE',
       detectedIso: null,
@@ -451,18 +457,22 @@ function Containers() {
       const result = normalizeVisionResult(response.data?.data ?? response.data)
 
       setVisionResult(result)
-      setForm((current) => ({
-        ...current,
-        matricule_iso: result.detected_iso || current.matricule_iso,
-        iso_type_code: result.iso_type
-          ? normalizeIsoTypeCode(result.iso_type)
-          : current.iso_type_code,
-      }))
-      setFormErrors((current) => ({
-        ...current,
-        matricule_iso: '',
-        iso_type_code: '',
-      }))
+      // Un resultat simule de secours n'est jamais preremplissable : on affiche
+      // l'avertissement mais on laisse l'utilisateur saisir manuellement.
+      if (!isSimulatedResult(result)) {
+        setForm((current) => ({
+          ...current,
+          matricule_iso: result.detected_iso || current.matricule_iso,
+          iso_type_code: result.iso_type
+            ? normalizeIsoTypeCode(result.iso_type)
+            : current.iso_type_code,
+        }))
+        setFormErrors((current) => ({
+          ...current,
+          matricule_iso: '',
+          iso_type_code: '',
+        }))
+      }
     } catch (requestError) {
       setVisionResult(null)
       setFeedback({
