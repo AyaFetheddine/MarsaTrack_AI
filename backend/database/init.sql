@@ -221,6 +221,8 @@ CREATE TABLE IF NOT EXISTS container (
                     COMMENT 'Origine de la saisie finale : manuelle, IA validee ou IA corrigee',
   ai_confidence     FLOAT          NULL
                     COMMENT 'Score de confiance YOLOv11 (0.0 à 1.0)',
+  iso_type_code     VARCHAR(4)     NULL
+                    COMMENT 'Code taille/type ISO 6346 (ex: 22G1) issu du modele Vision V2 ou saisi manuellement',
   created_by        INT UNSIGNED   NULL
                     COMMENT 'Utilisateur authentifié ayant saisi le conteneur',
   created_at        TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,

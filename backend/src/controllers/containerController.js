@@ -8,6 +8,15 @@ const {
 const ALLOWED_MOUVEMENTS = ['IMPORT', 'EXPORT'];
 const ALLOWED_DETECTION_SOURCES = ['MANUELLE', 'IA_VALIDEE', 'IA_CORRIGEE'];
 
+// Code taille/type ISO 6346 (ex: 22G1) : 4 caracteres, 3e position = lettre.
+const ISO_TYPE_CODE_FORMAT = /^[0-9A-Z]{2}[A-Z][0-9A-Z]$/;
+
+const normalizeIsoTypeCode = (value) => {
+  if (value === undefined || value === null) return null;
+  const normalized = String(value).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return normalized || null;
+};
+
 const cleanupUploadedFile = (file) => {
   if (!file?.path) return;
 
@@ -33,6 +42,7 @@ const saisirContainer = async (req, res) => {
     image_url,
     detected_iso,
     ai_confidence,
+    iso_type_code,
   } = req.body;
   const mouvement = req.body.mouvement || 'IMPORT';
   const detectionSource = req.body.detection_source || 'MANUELLE';
@@ -139,6 +149,15 @@ const saisirContainer = async (req, res) => {
     ? null
     : detectedValidation.normalized;
   const storedAiConfidence = detectionSource === 'MANUELLE' ? null : normalizedAiConfidence;
+  const storedIsoTypeCode = normalizeIsoTypeCode(iso_type_code);
+
+  if (storedIsoTypeCode && !ISO_TYPE_CODE_FORMAT.test(storedIsoTypeCode)) {
+    cleanupUploadedFile(req.file);
+    return res.status(400).json({
+      status  : 'error',
+      message : 'Code taille/type invalide : format attendu 4 caracteres (ex: 22G1).',
+    });
+  }
 
   if (!storedImageUrl) {
     cleanupUploadedFile(req.file);
@@ -172,9 +191,10 @@ const saisirContainer = async (req, res) => {
          detected_iso,
          detection_source,
          ai_confidence,
+         iso_type_code,
          created_by
        )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         operation_id,
         matriculeValidation.normalized,
@@ -183,6 +203,7 @@ const saisirContainer = async (req, res) => {
         storedDetectedIso,
         detectionSource,
         storedAiConfidence,
+        storedIsoTypeCode,
         createdBy,
       ]
     );
@@ -204,6 +225,7 @@ const saisirContainer = async (req, res) => {
         detected_iso  : storedDetectedIso,
         detection_source: detectionSource,
         ai_confidence : storedAiConfidence,
+        iso_type_code : storedIsoTypeCode,
         created_by    : createdBy,
         created_at    : createdRows[0].created_at,
       },
@@ -237,6 +259,7 @@ const getContainers = async (req, res) => {
          c.detected_iso,
          c.detection_source,
          c.ai_confidence,
+         c.iso_type_code,
          c.created_at,
          o.nom_operation,
          o.date_operation,

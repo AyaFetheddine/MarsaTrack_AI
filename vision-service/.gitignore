@@ -7,3 +7,5 @@ __pycache__/
 *.onnx
 datasets/
 runs/
+# Sorties du mode diagnostic local des crops (jamais versionnees).
+debug/

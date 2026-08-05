@@ -22,23 +22,38 @@ def test_health(monkeypatch):
         main_module,
         "get_runtime_status",
         lambda: {
-            "model_path": "models/container_code_yolo11n_best.pt",
+            "model_path": "models/container_code_type_yolo11n_v2_best.pt",
             "model_exists": True,
-            "model_loaded": False,
+            "model_version": "v2",
+            "active_model": "v2",
+            "model_classes": ["container-number", "iso-type"],
+            "model_loaded": True,
             "model_error": None,
+            "model_warning": None,
+            "fallback_enabled": True,
+            "fallback_model_available": True,
+            "fallback_in_use": False,
+            "yolo_available": True,
             "ocr_enabled": True,
-            "ocr_loaded": False,
+            "ocr_available": True,
+            "ocr_loaded": True,
             "ocr_engine": "paddleocr",
             "ocr_error": None,
             "device": "cpu",
-            "fallback_enabled": True,
         },
     )
     payload = client.get("/health").json()
     assert payload["status"] == "ok"
     assert payload["model_exists"] is True
     assert payload["ocr_engine"] == "paddleocr"
+    assert payload["model_version"] == "v2"
+    assert payload["active_model"] == "v2"
+    assert payload["model_classes"] == ["container-number", "iso-type"]
+    assert payload["fallback_model_available"] is True
+    assert payload["fallback_in_use"] is False
+    assert payload["ocr_loaded"] is True
     assert "Aya" not in payload["model_path"]
+    assert "C:\\" not in payload["model_path"]
 
 
 def test_detect_container_success(monkeypatch):

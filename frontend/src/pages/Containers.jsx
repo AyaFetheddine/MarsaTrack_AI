@@ -65,8 +65,17 @@ const initialForm = {
   operation_id: '',
   mouvement: 'IMPORT',
   matricule_iso: '',
+  iso_type_code: '',
   image_url: '',
 }
+
+const ISO_TYPE_CODE_REGEX = /^[0-9A-Z]{2}[A-Z][0-9A-Z]$/
+
+const normalizeIsoTypeCode = (value = '') =>
+  String(value ?? '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 4)
 
 const mouvementOptions = [
   { value: 'IMPORT', label: 'Import' },
@@ -98,7 +107,14 @@ const normalizeVisionResult = (result) => {
     throw new Error('Le service Vision IA a retourne une reponse invalide.')
   }
 
-  const numericFields = ['confidence', 'yolo_confidence', 'ocr_confidence']
+  const numericFields = [
+    'confidence',
+    'yolo_confidence',
+    'ocr_confidence',
+    'iso_type_confidence',
+    'iso_type_yolo_confidence',
+    'iso_type_ocr_confidence',
+  ]
   const normalizedResult = { ...result }
 
   numericFields.forEach((field) => {
@@ -118,6 +134,10 @@ const normalizeVisionResult = (result) => {
     'expected_check_digit',
     'detection_mode',
     'ocr_variant',
+    'iso_type',
+    'raw_iso_type_ocr_text',
+    'iso_type_ocr_variant',
+    'iso_type_warning',
     'message',
     'warning',
   ].forEach((field) => {
@@ -225,25 +245,29 @@ const getVisionValidationClass = (result) => {
   return 'bg-[#fee2e2] text-[#b91c1c]'
 }
 
+// Libellés métier : l'utilisateur terrain n'a pas à connaître le nom ni la
+// version des modèles utilisés. Les détails techniques restent disponibles
+// côté service (/health, logs, tests, documentation).
 const getDetectionModeLabel = (mode) => {
   const labels = {
     mock: 'Mode de démonstration',
     fallback_mock: 'Service IA indisponible - résultat de secours',
-    yolo_ocr: 'Analyse YOLO + OCR',
-    yolo_paddleocr: 'YOLO + PaddleOCR',
-    yolo_no_valid_iso: 'OCR à corriger',
-    yolo_only: 'Détection YOLO uniquement',
+    yolo_ocr: 'Analyse automatique',
+    yolo_paddleocr: 'Analyse automatique',
+    yolo_v2_paddleocr: 'Analyse automatique',
+    yolo_no_valid_iso: 'Lecture à vérifier',
+    yolo_only: 'Zone détectée, lecture incomplète',
     no_detection: 'Aucune zone détectée',
-    ocr_disabled: 'OCR désactivé',
-    ocr_error: 'Erreur OCR',
-    model_unavailable: 'Modèle indisponible',
+    ocr_disabled: 'Lecture automatique désactivée',
+    ocr_error: 'Lecture automatique indisponible',
+    model_unavailable: 'Analyse automatique indisponible',
   }
-  return labels[mode] || mode || null
+  return labels[mode] || 'Vision IA'
 }
 
 const getDetectionModeClass = (mode) => {
   if (mode === 'fallback_mock') return 'border-[#facc15] bg-[#fffbeb] text-[#a16207]'
-  if (['yolo_ocr', 'yolo_paddleocr'].includes(mode)) {
+  if (['yolo_ocr', 'yolo_paddleocr', 'yolo_v2_paddleocr'].includes(mode)) {
     return 'border-[#bbf7d0] bg-[#f0fdf4] text-[#047857]'
   }
   if (['no_detection', 'yolo_no_valid_iso', 'ocr_error', 'ocr_disabled'].includes(mode)) {
@@ -274,6 +298,7 @@ function Containers() {
   const operationRef = useRef(null)
   const mouvementRef = useRef(null)
   const matriculeIsoRef = useRef(null)
+  const isoTypeCodeRef = useRef(null)
   const formSectionRef = useRef(null)
   const imageBlockRef = useRef(null)
   const imageInputRef = useRef(null)
@@ -330,9 +355,12 @@ function Containers() {
 
   const handleChange = (event) => {
     const { name, value } = event.target
+    let nextValue = value
+    if (name === 'matricule_iso') nextValue = normalizeContainerCode(value)
+    else if (name === 'iso_type_code') nextValue = normalizeIsoTypeCode(value)
     setForm((current) => ({
       ...current,
-      [name]: name === 'matricule_iso' ? normalizeContainerCode(value) : value,
+      [name]: nextValue,
     }))
     setFormErrors((current) => ({ ...current, [name]: '' }))
   }
@@ -426,8 +454,15 @@ function Containers() {
       setForm((current) => ({
         ...current,
         matricule_iso: result.detected_iso || current.matricule_iso,
+        iso_type_code: result.iso_type
+          ? normalizeIsoTypeCode(result.iso_type)
+          : current.iso_type_code,
       }))
-      setFormErrors((current) => ({ ...current, matricule_iso: '' }))
+      setFormErrors((current) => ({
+        ...current,
+        matricule_iso: '',
+        iso_type_code: '',
+      }))
     } catch (requestError) {
       setVisionResult(null)
       setFeedback({
@@ -466,6 +501,12 @@ function Containers() {
       }
     }
 
+    const isoTypeValue = form.iso_type_code.trim()
+    if (isoTypeValue && !ISO_TYPE_CODE_REGEX.test(isoTypeValue)) {
+      errors.iso_type_code =
+        'Code taille/type invalide : 4 caractères, ex : 22G1 (le 3ᵉ est une lettre).'
+    }
+
     if (!selectedImage) {
       errors.image = 'Veuillez importer une image du conteneur.'
     }
@@ -485,6 +526,7 @@ function Containers() {
         operation_id: operationRef,
         mouvement: mouvementRef,
         matricule_iso: matriculeIsoRef,
+        iso_type_code: isoTypeCodeRef,
         image: imageBlockRef,
         image_url: imageUrlRef,
       })
@@ -498,6 +540,9 @@ function Containers() {
       formData.append('operation_id', form.operation_id)
       formData.append('mouvement', form.mouvement)
       formData.append('matricule_iso', normalizeContainerCode(form.matricule_iso))
+      if (form.iso_type_code.trim()) {
+        formData.append('iso_type_code', normalizeIsoTypeCode(form.iso_type_code))
+      }
       const detectionTrace = getDetectionTrace(form.matricule_iso, visionResult)
       formData.append('detection_source', detectionTrace.source)
 
@@ -578,7 +623,7 @@ function Containers() {
       <header>
         <h2 className="mb-1 text-2xl font-bold text-marsa-royal">Conteneurs</h2>
         <p className="text-sm text-marsa-muted">
-          Saisie terrain et préparation du flux de détection YOLOv11.
+          Saisie terrain assistée par la Vision IA.
         </p>
       </header>
 
@@ -649,6 +694,32 @@ function Containers() {
                 {formErrors.matricule_iso && (
                   <p className="mt-1.5 text-xs font-semibold text-[#b71c1c]">
                     {formErrors.matricule_iso}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="form-label" htmlFor="iso_type_code">
+                  Code taille/type{' '}
+                  <span className="font-normal text-marsa-muted">(facultatif)</span>
+                </label>
+                <input
+                  ref={isoTypeCodeRef}
+                  id="iso_type_code"
+                  name="iso_type_code"
+                  value={form.iso_type_code}
+                  onChange={handleChange}
+                  className={`form-control uppercase ${fieldErrorClass(formErrors.iso_type_code)}`}
+                  placeholder="22G1"
+                  maxLength={4}
+                />
+                {formErrors.iso_type_code ? (
+                  <p className="mt-1.5 text-xs font-semibold text-[#b71c1c]">
+                    {formErrors.iso_type_code}
+                  </p>
+                ) : (
+                  <p className="mt-1.5 text-xs text-marsa-muted">
+                    Prérempli par l'IA si détecté. Modifiable, laissé vide si non détecté.
                   </p>
                 )}
               </div>
@@ -848,6 +919,37 @@ function Containers() {
                       <p className="mt-1 text-2xl font-bold tracking-wide text-marsa-royal">
                         {visionResult.detected_iso || 'Aucun code ISO détecté'}
                       </p>
+                      <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-marsa-muted">
+                        <span>
+                          Code taille/type :{' '}
+                          <span className="font-bold text-marsa-royal">
+                            {visionResult.iso_type || 'Non détecté'}
+                          </span>
+                        </span>
+                        {visionResult.iso_type && (
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold ${
+                              visionResult.is_valid_iso_type_format
+                                ? 'bg-[#dcfce7] text-[#047857]'
+                                : 'bg-[#fee2e2] text-[#b91c1c]'
+                            }`}
+                          >
+                            {visionResult.is_valid_iso_type_format ? (
+                              <CheckCircle2 size={13} />
+                            ) : (
+                              <AlertCircle size={13} />
+                            )}
+                            {visionResult.is_valid_iso_type_format
+                              ? 'Format valide'
+                              : 'Format à vérifier'}
+                          </span>
+                        )}
+                      </p>
+                      {visionResult.iso_type_warning && (
+                        <p className="mt-1 text-xs font-semibold text-[#a16207]">
+                          {visionResult.iso_type_warning}
+                        </p>
+                      )}
                       {visionResult.raw_ocr_text &&
                         normalizeIso(visionResult.raw_ocr_text) !==
                           normalizeIso(visionResult.detected_iso) && (
@@ -911,7 +1013,7 @@ function Containers() {
                       </p>
                     </div>
                     <div className="rounded-md bg-white p-3">
-                      <p className="text-xs text-marsa-muted">Confiance YOLO</p>
+                      <p className="text-xs text-marsa-muted">Localisation du matricule</p>
                       <p className="mt-1 font-bold text-marsa-royal">
                         {visionResult.yolo_confidence == null
                           ? '-'
@@ -919,7 +1021,7 @@ function Containers() {
                       </p>
                     </div>
                     <div className="rounded-md bg-white p-3">
-                      <p className="text-xs text-marsa-muted">Confiance OCR</p>
+                      <p className="text-xs text-marsa-muted">Lecture du matricule</p>
                       <p className="mt-1 font-bold text-marsa-royal">
                         {visionResult.ocr_confidence == null
                           ? '-'
@@ -927,7 +1029,33 @@ function Containers() {
                       </p>
                     </div>
                     <div className="rounded-md bg-white p-3">
-                      <p className="text-xs text-marsa-muted">Variante OCR</p>
+                      <p className="text-xs text-marsa-muted">Localisation du code taille/type</p>
+                      <p className="mt-1 font-bold text-marsa-royal">
+                        {visionResult.iso_type_yolo_confidence == null
+                          ? '-'
+                          : `${Math.round(visionResult.iso_type_yolo_confidence * 100)} %`}
+                      </p>
+                    </div>
+                    <div className="rounded-md bg-white p-3">
+                      <p className="text-xs text-marsa-muted">Lecture du code taille/type</p>
+                      <p className="mt-1 font-bold text-marsa-royal">
+                        {visionResult.iso_type_ocr_confidence == null
+                          ? '-'
+                          : `${Math.round(visionResult.iso_type_ocr_confidence * 100)} %`}
+                      </p>
+                    </div>
+                    <div className="rounded-md bg-white p-3">
+                      <p className="text-xs text-marsa-muted">Format taille/type valide</p>
+                      <p className="mt-1 font-bold text-marsa-royal">
+                        {visionResult.iso_type
+                          ? visionResult.is_valid_iso_type_format
+                            ? 'Oui'
+                            : 'Non'
+                          : '-'}
+                      </p>
+                    </div>
+                    <div className="rounded-md bg-white p-3">
+                      <p className="text-xs text-marsa-muted">Traitement appliqué</p>
                       <p className="mt-1 font-bold text-marsa-royal">
                         {visionResult.ocr_variant || '-'}
                       </p>
@@ -987,7 +1115,7 @@ function Containers() {
 
               <div className="rounded-md border border-[#d8e6f3] bg-white px-4 py-3 text-sm text-marsa-muted">
                 <span className="font-bold text-marsa-royal">Vision IA.</span>{' '}
-                YOLO localise la zone du code, PaddleOCR lit les caractères et la validation ISO 6346 contrôle le résultat. Le matricule reste modifiable.
+                La Vision IA analyse l’image, extrait les informations du conteneur et vérifie leur conformité. Les valeurs restent modifiables avant enregistrement.
               </div>
 
               <button
@@ -1040,10 +1168,11 @@ function Containers() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="data-table min-w-[1040px]">
+            <table className="data-table min-w-[1120px]">
               <thead>
                 <tr>
                   <th>Matricule ISO</th>
+                  <th className="whitespace-nowrap">Taille/type</th>
                   <th>Mouvement</th>
                   <th>Opération</th>
                   <th>Image</th>
@@ -1059,6 +1188,9 @@ function Containers() {
                   <tr key={container.id}>
                     <td className="font-bold text-marsa-royal">
                       {container.matricule_iso}
+                    </td>
+                    <td className="whitespace-nowrap font-semibold text-marsa-royal">
+                      {container.iso_type_code || '-'}
                     </td>
                     <td>
                       <StatusBadge value={container.mouvement || 'IMPORT'} />
