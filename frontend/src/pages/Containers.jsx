@@ -271,6 +271,32 @@ const getDetectionModeLabel = (mode) => {
   return labels[mode] || 'Vision IA'
 }
 
+// Traduit le nom technique de la variante OCR ("reflow_inverted", "upscaled"...)
+// en langage metier lisible. Affiche la technique dominante ; les valeurs
+// brutes restent dans l'API et les logs pour le debug.
+const PROCESSING_LABELS = [
+  ['reflow', 'Reconstruction avancée'],
+  ['context', 'Analyse en zone élargie'],
+  ['clean', 'Nettoyage du bruit'],
+  ['column', 'Lecture par colonnes'],
+  ['combined', 'Recomposition des fragments'],
+  ['invert', 'Couleurs inversées'],
+  ['rotate', 'Rotation de l’image'],
+  ['threshold', 'Binarisation'],
+  ['sharpen', 'Netteté renforcée'],
+  ['contrast', 'Contraste renforcé'],
+  ['gray', 'Niveaux de gris'],
+  ['upscal', 'Agrandissement'],
+  ['original', 'Image d’origine'],
+]
+
+const getProcessingLabel = (variant) => {
+  if (!variant) return '-'
+  const key = String(variant).toLowerCase()
+  const match = PROCESSING_LABELS.find(([token]) => key.includes(token))
+  return match ? match[1] : 'Traitement standard'
+}
+
 const getDetectionModeClass = (mode) => {
   if (mode === 'fallback_mock') return 'border-[#facc15] bg-[#fffbeb] text-[#a16207]'
   if (['yolo_ocr', 'yolo_paddleocr', 'yolo_v2_paddleocr'].includes(mode)) {
@@ -414,7 +440,16 @@ function Containers() {
     setSelectedImage(file)
     setPreviewUrl(URL.createObjectURL(file))
     setVisionResult(null)
-    setFormErrors((current) => ({ ...current, image: '', image_url: '' }))
+    // Nouvelle image : on vide les champs remplis par l'IA precedente pour
+    // qu'ils ne restent pas affiches pendant l'analyse de la nouvelle image.
+    setForm((current) => ({ ...current, matricule_iso: '', iso_type_code: '' }))
+    setFormErrors((current) => ({
+      ...current,
+      image: '',
+      image_url: '',
+      matricule_iso: '',
+      iso_type_code: '',
+    }))
     return true
   }
 
@@ -436,7 +471,14 @@ function Containers() {
       URL.revokeObjectURL(previewUrl)
     }
     setPreviewUrl('')
-    setFormErrors((current) => ({ ...current, image: '' }))
+    // Retirer l'image vide aussi les champs remplis par l'IA (matricule + type).
+    setForm((current) => ({ ...current, matricule_iso: '', iso_type_code: '' }))
+    setFormErrors((current) => ({
+      ...current,
+      image: '',
+      matricule_iso: '',
+      iso_type_code: '',
+    }))
 
     if (imageInputRef.current) {
       imageInputRef.current.value = ''
@@ -1015,86 +1057,127 @@ function Containers() {
                       </p>
                     )}
 
-                  <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                    <div className="rounded-md bg-white p-3">
-                      <p className="text-xs text-marsa-muted">Confiance globale</p>
-                      <p className="mt-1 font-bold text-marsa-royal">
-                        {Math.round((visionResult.confidence || 0) * 100)} %
+                  {/* Decomposition normee ISO 6346 du matricule (info principale) */}
+                  {visionResult.detected_iso && (
+                    <div className="mt-4">
+                      <p className="mb-2 text-xs font-bold uppercase text-marsa-muted">
+                        Décomposition du matricule (ISO 6346)
                       </p>
+                      <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                        <div className="rounded-md bg-white p-3">
+                          <p className="text-xs text-marsa-muted">Propriétaire</p>
+                          <p className="mt-1 font-bold text-marsa-royal">
+                            {visionResult.owner_code || '-'}
+                          </p>
+                        </div>
+                        <div className="rounded-md bg-white p-3">
+                          <p className="text-xs text-marsa-muted">Catégorie</p>
+                          <p className="mt-1 font-bold text-marsa-royal">
+                            {visionResult.category || '-'}
+                          </p>
+                        </div>
+                        <div className="rounded-md bg-white p-3">
+                          <p className="text-xs text-marsa-muted">Numéro série</p>
+                          <p className="mt-1 font-bold text-marsa-royal">
+                            {visionResult.serial_number || '-'}
+                          </p>
+                        </div>
+                        <div className="rounded-md bg-white p-3">
+                          <p className="text-xs text-marsa-muted">Contrôle</p>
+                          <p className="mt-1 font-bold text-marsa-royal">
+                            {visionResult.check_digit || '-'}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="rounded-md bg-white p-3">
-                      <p className="text-xs text-marsa-muted">Localisation du matricule</p>
-                      <p className="mt-1 font-bold text-marsa-royal">
-                        {visionResult.yolo_confidence == null
-                          ? '-'
-                          : `${Math.round(visionResult.yolo_confidence * 100)} %`}
+                  )}
+
+                  {/* Signification metier du code taille/type (dimensions + type) */}
+                  {visionResult.iso_type && (
+                    <div className="mt-4">
+                      <p className="mb-2 text-xs font-bold uppercase text-marsa-muted">
+                        Signification du code taille/type
                       </p>
+                      <div className="grid gap-3 text-sm sm:grid-cols-3">
+                        <div className="rounded-md bg-white p-3">
+                          <p className="text-xs text-marsa-muted">Longueur</p>
+                          <p className="mt-1 font-bold text-marsa-royal">
+                            {visionResult.iso_type_details?.length_label || 'Non répertoriée'}
+                          </p>
+                        </div>
+                        <div className="rounded-md bg-white p-3">
+                          <p className="text-xs text-marsa-muted">Hauteur</p>
+                          <p className="mt-1 font-bold text-marsa-royal">
+                            {visionResult.iso_type_details?.height_label || 'Non répertoriée'}
+                          </p>
+                        </div>
+                        <div className="rounded-md bg-white p-3">
+                          <p className="text-xs text-marsa-muted">Type</p>
+                          <p className="mt-1 font-bold text-marsa-royal">
+                            {visionResult.iso_type_details?.type_label || 'Non répertorié'}
+                          </p>
+                        </div>
+                      </div>
+                      {visionResult.iso_type_details?.requires_power && (
+                        <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#e0f2fe] px-3 py-1 text-xs font-bold text-[#075985]">
+                          ⚡ Température contrôlée — nécessite une alimentation électrique (à brancher)
+                        </p>
+                      )}
                     </div>
-                    <div className="rounded-md bg-white p-3">
-                      <p className="text-xs text-marsa-muted">Lecture du matricule</p>
-                      <p className="mt-1 font-bold text-marsa-royal">
-                        {visionResult.ocr_confidence == null
-                          ? '-'
-                          : `${Math.round(visionResult.ocr_confidence * 100)} %`}
-                      </p>
+                  )}
+
+                  {/* Details techniques : replies par defaut, non actionnables par l'operateur */}
+                  <details className="mt-4 rounded-md border border-[#d8e6f3] bg-white">
+                    <summary className="cursor-pointer px-3 py-2 text-xs font-bold uppercase text-marsa-muted">
+                      Détails techniques
+                    </summary>
+                    <div className="grid gap-3 border-t border-[#eef2f7] p-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                      <div className="rounded-md border border-[#eef2f7] bg-[#f8fbff] p-3">
+                        <p className="text-xs text-marsa-muted">Confiance globale</p>
+                        <p className="mt-1 font-bold text-marsa-royal">
+                          {Math.round((visionResult.confidence || 0) * 100)} %
+                        </p>
+                      </div>
+                      <div className="rounded-md border border-[#eef2f7] bg-[#f8fbff] p-3">
+                        <p className="text-xs text-marsa-muted">Localisation du matricule</p>
+                        <p className="mt-1 font-bold text-marsa-royal">
+                          {visionResult.yolo_confidence == null
+                            ? '-'
+                            : `${Math.round(visionResult.yolo_confidence * 100)} %`}
+                        </p>
+                      </div>
+                      <div className="rounded-md border border-[#eef2f7] bg-[#f8fbff] p-3">
+                        <p className="text-xs text-marsa-muted">Lecture du matricule</p>
+                        <p className="mt-1 font-bold text-marsa-royal">
+                          {visionResult.ocr_confidence == null
+                            ? '-'
+                            : `${Math.round(visionResult.ocr_confidence * 100)} %`}
+                        </p>
+                      </div>
+                      <div className="rounded-md border border-[#eef2f7] bg-[#f8fbff] p-3">
+                        <p className="text-xs text-marsa-muted">Localisation du code taille/type</p>
+                        <p className="mt-1 font-bold text-marsa-royal">
+                          {visionResult.iso_type_yolo_confidence == null
+                            ? '-'
+                            : `${Math.round(visionResult.iso_type_yolo_confidence * 100)} %`}
+                        </p>
+                      </div>
+                      <div className="rounded-md border border-[#eef2f7] bg-[#f8fbff] p-3">
+                        <p className="text-xs text-marsa-muted">Lecture du code taille/type</p>
+                        <p className="mt-1 font-bold text-marsa-royal">
+                          {visionResult.iso_type_ocr_confidence == null
+                            ? '-'
+                            : `${Math.round(visionResult.iso_type_ocr_confidence * 100)} %`}
+                        </p>
+                      </div>
+                      <div className="rounded-md border border-[#eef2f7] bg-[#f8fbff] p-3">
+                        <p className="text-xs text-marsa-muted">Traitement appliqué</p>
+                        <p className="mt-1 font-bold text-marsa-royal">
+                          {getProcessingLabel(visionResult.ocr_variant)}
+                        </p>
+                      </div>
                     </div>
-                    <div className="rounded-md bg-white p-3">
-                      <p className="text-xs text-marsa-muted">Localisation du code taille/type</p>
-                      <p className="mt-1 font-bold text-marsa-royal">
-                        {visionResult.iso_type_yolo_confidence == null
-                          ? '-'
-                          : `${Math.round(visionResult.iso_type_yolo_confidence * 100)} %`}
-                      </p>
-                    </div>
-                    <div className="rounded-md bg-white p-3">
-                      <p className="text-xs text-marsa-muted">Lecture du code taille/type</p>
-                      <p className="mt-1 font-bold text-marsa-royal">
-                        {visionResult.iso_type_ocr_confidence == null
-                          ? '-'
-                          : `${Math.round(visionResult.iso_type_ocr_confidence * 100)} %`}
-                      </p>
-                    </div>
-                    <div className="rounded-md bg-white p-3">
-                      <p className="text-xs text-marsa-muted">Format taille/type valide</p>
-                      <p className="mt-1 font-bold text-marsa-royal">
-                        {visionResult.iso_type
-                          ? visionResult.is_valid_iso_type_format
-                            ? 'Oui'
-                            : 'Non'
-                          : '-'}
-                      </p>
-                    </div>
-                    <div className="rounded-md bg-white p-3">
-                      <p className="text-xs text-marsa-muted">Traitement appliqué</p>
-                      <p className="mt-1 font-bold text-marsa-royal">
-                        {visionResult.ocr_variant || '-'}
-                      </p>
-                    </div>
-                    <div className="rounded-md bg-white p-3">
-                      <p className="text-xs text-marsa-muted">Propriétaire</p>
-                      <p className="mt-1 font-bold text-marsa-royal">
-                        {visionResult.owner_code || '-'}
-                      </p>
-                    </div>
-                    <div className="rounded-md bg-white p-3">
-                      <p className="text-xs text-marsa-muted">Catégorie</p>
-                      <p className="mt-1 font-bold text-marsa-royal">
-                        {visionResult.category || '-'}
-                      </p>
-                    </div>
-                    <div className="rounded-md bg-white p-3">
-                      <p className="text-xs text-marsa-muted">Numéro série</p>
-                      <p className="mt-1 font-bold text-marsa-royal">
-                        {visionResult.serial_number || '-'}
-                      </p>
-                    </div>
-                    <div className="rounded-md bg-white p-3">
-                      <p className="text-xs text-marsa-muted">Contrôle</p>
-                      <p className="mt-1 font-bold text-marsa-royal">
-                        {visionResult.check_digit || '-'}
-                      </p>
-                    </div>
-                  </div>
+                  </details>
                   </div>
                 </VisionResultBoundary>
               )}
