@@ -13,5 +13,5 @@
 USE marsatrack_db;
 
 UPDATE users
-SET password_hash = '$2b$12$gpNTik.jsRuPD37fDEG4TObAZLuNPkjyV3ZVgUkZGJ6aoo61Hi8me'
+SET password_hash = '$2b$12$IhIjnd8m0ZSiEmNHFInp0OTjE7OF8B1r8uYFe3MnS6gycm7OUwNhq'
 WHERE matricule IN ('ADM-001', 'RE-001', 'CE-001', 'PQ-001', 'CS-001');

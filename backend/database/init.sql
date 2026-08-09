@@ -271,7 +271,7 @@ VALUES (
   'Administrateur Système',
   'ADM-001',
   'Admin',
-  '$2b$12$gpNTik.jsRuPD37fDEG4TObAZLuNPkjyV3ZVgUkZGJ6aoo61Hi8me'
+  '$2b$12$IhIjnd8m0ZSiEmNHFInp0OTjE7OF8B1r8uYFe3MnS6gycm7OUwNhq'
 );
 
 -- Utilisateur de test avec droits de création d'opérations (mot de passe : voir COMPTES-TEST.local.md)
@@ -280,7 +280,7 @@ VALUES (
   'Responsable Exploitation Test',
   'RE-001',
   'Responsable_Exploitation',
-  '$2b$12$gpNTik.jsRuPD37fDEG4TObAZLuNPkjyV3ZVgUkZGJ6aoo61Hi8me'
+  '$2b$12$IhIjnd8m0ZSiEmNHFInp0OTjE7OF8B1r8uYFe3MnS6gycm7OUwNhq'
 );
 
 -- Utilisateur de test avec droits de création d'opérations (mot de passe : voir COMPTES-TEST.local.md)
@@ -289,7 +289,7 @@ VALUES (
   'Chef Equipe Test',
   'CE-001',
   'Chef_Equipe',
-  '$2b$12$gpNTik.jsRuPD37fDEG4TObAZLuNPkjyV3ZVgUkZGJ6aoo61Hi8me'
+  '$2b$12$IhIjnd8m0ZSiEmNHFInp0OTjE7OF8B1r8uYFe3MnS6gycm7OUwNhq'
 );
 
 -- Utilisateur de test avec droits de saisie des conteneurs (mot de passe : voir COMPTES-TEST.local.md)
@@ -298,7 +298,7 @@ VALUES (
   'Portiqueur Test',
   'PQ-001',
   'Portiqueur',
-  '$2b$12$gpNTik.jsRuPD37fDEG4TObAZLuNPkjyV3ZVgUkZGJ6aoo61Hi8me'
+  '$2b$12$IhIjnd8m0ZSiEmNHFInp0OTjE7OF8B1r8uYFe3MnS6gycm7OUwNhq'
 );
 
 -- Utilisateur de test avec droits de cloture des operations (mot de passe : voir COMPTES-TEST.local.md)
@@ -307,7 +307,7 @@ VALUES (
   'Chef Services Test',
   'CS-001',
   'Chef_Services',
-  '$2b$12$gpNTik.jsRuPD37fDEG4TObAZLuNPkjyV3ZVgUkZGJ6aoo61Hi8me'
+  '$2b$12$IhIjnd8m0ZSiEmNHFInp0OTjE7OF8B1r8uYFe3MnS6gycm7OUwNhq'
 );
 
 -- Personnel operationnel affectable de test
