@@ -900,6 +900,101 @@ def test_api_result_never_exposes_a_local_path(monkeypatch, tmp_path):
     assert str(tmp_path) not in serialized
 
 
+# ─── Secours matricule vertical : segmentation + reflow (surface bombee) ─────
+def _stacked_chars_image(count: int, width: int = 60, cell: int = 60, gap: int = 20):
+    """Colonne verticale synthetique : `count` blocs blancs empiles sur fond noir."""
+    from PIL import ImageDraw
+
+    height = count * (cell + gap) + gap
+    image = Image.new("RGB", (width, height), "black")
+    draw = ImageDraw.Draw(image)
+    for index in range(count):
+        top = gap + index * (cell + gap)
+        draw.rectangle([15, top, width - 15, top + cell], fill="white")
+    return image
+
+
+def test_segment_characters_isolates_each_block():
+    pytest.importorskip("cv2")
+    import numpy as np
+
+    import cv2
+
+    image = _stacked_chars_image(6)
+    gray = cv2.cvtColor(np.asarray(image), cv2.COLOR_RGB2GRAY)
+    boxes = service._segment_characters(gray)
+    assert len(boxes) == 6
+    # tries de haut en bas
+    tops = [y for (_x, y, _w, _h) in boxes]
+    assert tops == sorted(tops)
+
+
+def test_reflow_vertical_crop_returns_two_polarities():
+    pytest.importorskip("cv2")
+    variants = service.reflow_vertical_crop(_stacked_chars_image(7))
+    names = [name for name, _ in variants]
+    assert names == ["reflow_inverted", "reflow"]
+    # la ligne recomposee est plus large que haute (reflow horizontal reussi)
+    for _name, image in variants:
+        assert image.width > image.height
+
+
+def test_reflow_returns_empty_when_too_few_characters():
+    pytest.importorskip("cv2")
+    # 2 blocs : sous le minimum plausible d'un matricule -> pas de reflow
+    assert service.reflow_vertical_crop(_stacked_chars_image(2)) == []
+
+
+def test_vertical_segmentation_respects_disable_flag(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        service, "settings", vertical_settings(tmp_path, vertical_segmentation_enabled=False)
+    )
+    monkeypatch.setattr(service, "get_ocr_engine", lambda: object())
+    assert service.recognize_vertical_by_segmentation(_stacked_chars_image(6)) == []
+
+
+def test_vertical_fallback_triggers_segmentation_when_variants_fail(monkeypatch, tmp_path):
+    """Si les variantes verticales ne donnent rien de valide, le secours est utilise."""
+    monkeypatch.setattr(service, "settings", vertical_settings(tmp_path))
+    monkeypatch.setattr(service, "get_ocr_engine", lambda: object())
+    # aucune variante classique ne produit de lecture
+    monkeypatch.setattr(service, "generate_vertical_ocr_variants", lambda _crop: [])
+    called = {"seg": 0}
+
+    def fake_segmentation(_crop, index=0):
+        called["seg"] += 1
+        return [service.OcrReading("MRKU6234191", 0.9, "reflow_inverted", index, 0.82)]
+
+    monkeypatch.setattr(service, "recognize_vertical_by_segmentation", fake_segmentation)
+    readings = service.recognize_container_code(Image.new("RGB", (40, 300)), 0, "vertical")
+    assert called["seg"] == 1
+    assert service.select_best_iso_candidate(readings)["candidate"] == "MRKU6234191"
+
+
+def test_vertical_fallback_skipped_when_variant_already_valid(monkeypatch, tmp_path):
+    """Si une variante classique suffit, on ne paie pas le cout de la segmentation."""
+    monkeypatch.setattr(service, "settings", vertical_settings(tmp_path))
+    monkeypatch.setattr(service, "get_ocr_engine", lambda: object())
+    monkeypatch.setattr(
+        service,
+        "generate_vertical_ocr_variants",
+        lambda _crop: [("upscaled", Image.new("RGB", (300, 40)))],
+    )
+    monkeypatch.setattr(
+        service,
+        "_read_variant",
+        lambda *_a, **_k: [service.OcrReading("MRKU6234191", 0.9, "upscaled", 0, 0.9)],
+    )
+    called = {"seg": 0}
+    monkeypatch.setattr(
+        service,
+        "recognize_vertical_by_segmentation",
+        lambda *_a, **_k: called.__setitem__("seg", called["seg"] + 1) or [],
+    )
+    service.recognize_container_code(Image.new("RGB", (40, 300)), 0, "vertical")
+    assert called["seg"] == 0
+
+
 MODEL_PATH = Path(__file__).resolve().parents[1] / "models" / "container_code_yolo11n_best.pt"
 
 

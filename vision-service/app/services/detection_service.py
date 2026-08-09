@@ -813,6 +813,100 @@ def _detect_crop_orientation(crop: Image.Image, readings: list[OcrReading], hint
     return observed if observed != UNCERTAIN else hint
 
 
+# ─── Secours : matricule vertical sur surface bombee (segmentation + reflow) ──
+# Un marquage vertical (un caractere par ligne) sur une paroi arrondie donne,
+# une fois redresse, une ligne de texte courbee que PaddleOCR ne lit pas en
+# bloc ; et un caractere isole manque de contexte (un "T" seul est lu "I"). On
+# segmente donc chaque caractere par composantes connexes, puis on les recompose
+# cote a cote en une ligne horizontale : l'OCR retrouve alors le contexte de mot.
+def _segment_characters(gray: Any) -> list[tuple[int, int, int, int]]:
+    """Isole les caracteres d'une colonne (composantes connexes), tries haut->bas."""
+    import cv2
+    import numpy as np
+
+    _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    if binary.mean() / 255 > 0.5:  # le texte doit etre la minorite (blanc sur noir)
+        binary = 255 - binary
+    binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8))
+    height, width = binary.shape
+    count, _labels, stats, centroids = cv2.connectedComponentsWithStats(binary, connectivity=8)
+    boxes: list[tuple[int, int, int, int, float]] = []
+    for index in range(1, count):
+        x, y, w, h, area = stats[index]
+        if area < 60 or h < 12 or w < 5:
+            continue
+        if w > 0.95 * width and h < 10:  # ligne de corrugation horizontale du conteneur
+            continue
+        boxes.append((int(x), int(y), int(w), int(h), float(centroids[index][1])))
+    boxes.sort(key=lambda item: item[4])
+    return [(x, y, w, h) for (x, y, w, h, _cy) in boxes]
+
+
+def _reflow_characters(gray: Any, boxes: list[tuple[int, int, int, int]]) -> Any:
+    """Recompose des cellules verticales en une seule ligne horizontale."""
+    import cv2
+    import numpy as np
+
+    target_height, gap, pad = 80, 14, 6
+    height, width = gray.shape
+    tiles = []
+    for (x, y, w, h) in boxes:
+        cell = gray[max(0, y - pad): min(height, y + h + pad),
+                    max(0, x - pad): min(width, x + w + pad)]
+        if cell.size == 0:
+            continue
+        scale = target_height / cell.shape[0]
+        cell = cv2.resize(
+            cell, (max(1, int(cell.shape[1] * scale)), target_height), interpolation=cv2.INTER_CUBIC
+        )
+        tiles.append(cell)
+    if not tiles:
+        return None
+    separator = np.zeros((target_height, gap), dtype=np.uint8)
+    row = tiles[0]
+    for tile in tiles[1:]:
+        row = np.hstack([row, separator, tile])
+    return cv2.copyMakeBorder(row, 20, 20, 20, 20, cv2.BORDER_CONSTANT, value=0)
+
+
+def reflow_vertical_crop(crop: Image.Image) -> list[tuple[str, Image.Image]]:
+    """Variantes (nom, image) de la colonne recomposee en ligne, ou [] si inapplicable."""
+    try:
+        import cv2
+        import numpy as np
+    except ImportError:
+        return []
+    try:
+        gray = cv2.cvtColor(np.asarray(crop.convert("RGB")), cv2.COLOR_RGB2GRAY)
+        boxes = _segment_characters(gray)
+        # Nombre de caracteres plausible (matricule = 4 lettres + 7 chiffres).
+        if not (4 <= len(boxes) <= 20):
+            return []
+        row = _reflow_characters(gray, boxes)
+        if row is None:
+            return []
+    except Exception:  # noqa: BLE001 - traitement d'image non bloquant
+        return []
+    light = Image.fromarray(row)
+    inverted = Image.fromarray(255 - np.asarray(row))
+    # L'inversion (texte sombre / fond clair) est celle sur laquelle PaddleOCR est
+    # le plus fiable ; on fournit les deux et le classement ISO tranche.
+    return [("reflow_inverted", inverted), ("reflow", light)]
+
+
+def recognize_vertical_by_segmentation(
+    crop: Image.Image, detection_index: int = 0
+) -> list[OcrReading]:
+    """Secours matricule vertical : segmentation caractere + reflow + OCR."""
+    if not getattr(settings, "vertical_segmentation_enabled", True):
+        return []
+    engine = get_ocr_engine()
+    readings: list[OcrReading] = []
+    for variant_name, image in reflow_vertical_crop(crop):
+        readings.extend(_read_variant(engine, image, variant_name, detection_index, HORIZONTAL))
+    return readings
+
+
 def recognize_container_code(
     crop: Image.Image, detection_index: int, orientation: str = UNCERTAIN
 ) -> list[OcrReading]:
@@ -839,6 +933,9 @@ def recognize_container_code(
             return readings
 
     if orientation == VERTICAL:
+        # Dernier recours : segmentation caractere + reflow (surface bombee).
+        if not _has_reliable_iso(readings):
+            readings.extend(recognize_vertical_by_segmentation(crop, detection_index))
         return readings
 
     # Cas horizontal ou incertain : la zone etait peut-etre verticale malgre
@@ -852,6 +949,8 @@ def recognize_container_code(
             )
             if _has_reliable_iso(readings):
                 return readings
+        if not _has_reliable_iso(readings):
+            readings.extend(recognize_vertical_by_segmentation(crop, detection_index))
         return readings
 
     if not any(select_best_iso_candidate([reading]) for reading in readings):
@@ -1286,6 +1385,7 @@ def _process_iso_type(
                 "length_label": parsed["length_label"],
                 "height_label": parsed["height_label"],
                 "type_label": parsed["type_label"],
+                "requires_power": parsed.get("requires_power", False),
             },
             "iso_type_ocr_variant": reading.variant,
             "iso_type_bbox": region["bbox"],

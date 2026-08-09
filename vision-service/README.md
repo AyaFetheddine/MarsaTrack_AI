@@ -200,6 +200,16 @@ zones, mais la lecture demande un traitement dedie :
   caractere a 98 % est fortement penalisee ; la validation ISO 6346 prime sur un
   score OCR eleve. La confiance affichee a l'utilisateur est une **confiance
   metier** recalculee, jamais une confiance brute trompeuse.
+- **Secours segmentation + reflow (surface bombee)** : quand un matricule
+  vertical reste illisible en bloc (paroi arrondie, ligne de texte courbee une
+  fois redressee, lettres isolees sans contexte), on segmente chaque caractere
+  par **composantes connexes**, puis on les **recompose cote a cote en une ligne
+  horizontale**. L'OCR retrouve alors le contexte de mot et lit l'ensemble
+  (constate sur un cas reel : `TEMU3108252` correctement lu et valide). Cette
+  etape n'est declenchee **qu'en dernier recours**, uniquement pour une zone
+  verticale qu'aucune variante classique n'a su lire. Reglable via
+  `VISION_VERTICAL_SEGMENTATION_ENABLED` (defaut `true`). Utilise OpenCV
+  (`cv2`), fourni avec PaddleOCR ; si absent, l'etape est simplement ignoree.
 
 Le cas horizontal (import de fichier, majorite des captures camera) est
 **inchange** : il emprunte exactement le meme chemin qu'avant.
@@ -246,6 +256,6 @@ Les tests utilisent des doubles YOLO/OCR (classes V1 `container_code` et V2 `con
 - La qualite OCR depend du cadrage, de l'eclairage et de la resolution.
 - Le premier appel est plus lent (chargement des poids YOLO + PaddleOCR).
 - **Lecture verticale** : la reconstruction et les rotations ameliorent nettement les colonnes verticales, mais un caractere physiquement illisible (masque par un filigrane, un reflet ou un flou fort) ne peut jamais etre recupere. Dans ce cas, la zone est signalee comme non fiable et la **correction manuelle** reste la voie normale.
-- **Surface bombee / perspective** : sur un conteneur a paroi arrondie ou photographie de biais, certaines lettres du matricule sont deformees et confondues par l'OCR avec des chiffres (constate sur un cas reel : `TEMU` lu `TE20`, le `M` et le `U` etant lus `2` et `0`). Aucune correction positionnelle prudente ne peut inventer la bonne lettre : le matricule est alors affiche en lecture brute la plus complete pour faciliter la correction manuelle, mais n'est pas valide automatiquement. Le code taille/type, plus court, reste souvent recuperable (ex: `22G1` lu `2221` puis corrige via la preference "groupe de type connu").
+- **Surface bombee / perspective** : sur un conteneur a paroi arrondie ou photographie de biais, un matricule vertical n'est pas lisible en bloc (ligne de texte courbee, lettres isolees sans contexte). Le **secours segmentation + reflow** (voir plus haut) traite ce cas et recupere le matricule complet dans les images testees (ex: `TEMU3108252`). Limite residuelle : ce secours suppose une binarisation propre des caracteres ; sur une image tres floue, tres sombre ou a tres faible contraste, la segmentation peut echouer et la correction manuelle reste la voie de repli.
 - La lecture verticale ajoute des variantes OCR : sur une image ou aucun code valide n'est trouve, le temps de traitement d'une zone verticale est plus long que celui d'une zone horizontale (borne par `VISION_MAX_OCR_VARIANTS`, `VISION_MAX_CROP_SIDE_PX` et le timeout backend). Ordre de grandeur observe sur CPU : ~2 s pour une photo nette, jusqu'a ~30 s pour une grande image (1920x1080) dont le matricule vertical n'est pas lisible et declenche toutes les variantes.
 ```

@@ -20,32 +20,49 @@ import re
 ISO_SIZE_TYPE_FORMAT = re.compile(r"^[0-9A-Z]{2}[A-Z][0-9A-Z]$")
 
 # --- Mappings extensibles (a completer au fil du projet) ---------------------
+# 1re position : code de longueur.
 LENGTH_CODES = {
+    "1": "10 pieds",
     "2": "20 pieds",
+    "3": "30 pieds",
     "4": "40 pieds",
     "L": "45 pieds",
     "M": "48 pieds",
     "N": "49 pieds",
 }
 
+# 2e position : code de hauteur (et largeur). Les valeurs "5" et "6" designent
+# des conteneurs "High Cube" (2896 mm). Table volontairement centree sur les
+# codes courants ; les codes de largeur etendue (C, D, E, F, ...) restent a
+# completer si besoin.
 HEIGHT_WIDTH_CODES = {
     "0": '8\'0" (2438 mm)',
     "2": '8\'6" (2591 mm)',
     "4": '9\'0" (2743 mm)',
-    "5": '9\'6" (2896 mm)',
+    "5": '9\'6" (2896 mm) — High Cube',
+    "6": 'supérieur à 9\'6" (2896 mm) — High Cube',
+    "8": '4\'3" (1295 mm)',
+    "9": 'inférieur à 4\'0" (1219 mm)',
 }
 
+# 3e position : groupe de type. Une lettre normée ISO 6346.
 TYPE_GROUP_CODES = {
-    "G": "Conteneur general (dry)",
-    "V": "Conteneur ventile",
+    "G": "Conteneur général (dry)",
+    "V": "Conteneur ventilé",
     "R": "Conteneur frigorifique (reefer)",
-    "H": "Conteneur isotherme",
-    "U": "Open top",
+    "H": "Conteneur isotherme / frigorifique (équipement amovible)",
+    "U": "Open top (toit ouvert)",
     "P": "Plateau / flat rack",
     "T": "Citerne (tank)",
     "B": "Vrac (bulk)",
-    "S": "Cargaison specifique",
+    "S": "Cargaison spécifique (bétail, véhicules, ...)",
+    "A": "Usage général (air / surface)",
+    "K": "Citerne / usage spécifique",
 }
+
+# Groupes de type a temperature controlee : necessitent une alimentation
+# electrique (branchement reefer) une fois places.
+POWERED_TYPE_GROUPS = {"R", "H"}
 
 
 def normalize_iso_size_type(value: str | None) -> str:
@@ -116,5 +133,7 @@ def parse_iso_size_type(value: str | None) -> dict:
         "length_label": length_label,
         "height_label": height_label,
         "type_label": type_label,
+        # Conteneur a temperature controlee : a brancher une fois place.
+        "requires_power": type_group in POWERED_TYPE_GROUPS,
         "warning": warning,
     }

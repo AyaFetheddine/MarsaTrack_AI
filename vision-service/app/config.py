@@ -94,6 +94,10 @@ class VisionSettings:
     max_upscale_factor: int = _as_int("VISION_MAX_UPSCALE_FACTOR", 8)
     # Garde-fou de performance : nombre maximal de variantes OCR par zone.
     max_ocr_variants: int = _as_int("VISION_MAX_OCR_VARIANTS", 14)
+    # Secours matricule vertical sur surface bombee (segmentation + reflow).
+    vertical_segmentation_enabled: bool = _as_bool(
+        "VISION_VERTICAL_SEGMENTATION_ENABLED", True
+    )
 
     # --- Mode diagnostic local (desactive par defaut) ----------------------
     debug_save_crops: bool = _as_bool("VISION_DEBUG_SAVE_CROPS", False)
