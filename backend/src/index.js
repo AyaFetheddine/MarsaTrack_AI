@@ -23,8 +23,24 @@ const app = express();
 
 // ─── Middlewares globaux ─────────────────────────────────────────────────────
 
-// Autorise les requêtes cross-origin (nécessaire pour le dashboard React)
-app.use(cors());
+// CORS restreint aux origines autorisees (par defaut le frontend local).
+// Configurable via CORS_ORIGINS (liste separee par des virgules).
+const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Requetes sans origine (curl, health checks, apps natives) autorisees.
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('Origine non autorisee par la politique CORS.'));
+    },
+  }),
+);
 
 // Parse automatiquement le corps des requêtes en JSON
 app.use(express.json());
@@ -82,6 +98,15 @@ app.get('/api/health', (req, res) => {
  */
 const startServer = async () => {
   try {
+    // Secret JWT obligatoire : refuser de demarrer sans, plutot que de signer
+    // des tokens avec une valeur indefinie (authentification silencieusement cassee).
+    if (!process.env.JWT_SECRET) {
+      console.error(
+        '💥 JWT_SECRET manquant. Definissez-le dans backend/.env avant de demarrer le serveur.',
+      );
+      process.exit(1);
+    }
+
     // Vérification de la connexion MySQL avant d'accepter le trafic
     await testConnection();
 

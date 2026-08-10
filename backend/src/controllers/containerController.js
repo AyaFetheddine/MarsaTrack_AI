@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 
 const { pool } = require('../config/db');
 const {
@@ -23,6 +24,29 @@ const cleanupUploadedFile = (file) => {
   fs.unlink(file.path, (error) => {
     if (error) {
       console.error('[containerController] Erreur suppression fichier upload :', error.message);
+    }
+  });
+};
+
+const UPLOAD_ROOT = path.join(process.cwd(), 'uploads', 'containers');
+const LOCAL_IMAGE_PREFIX = '/uploads/containers/';
+
+// Resout le chemin physique d'une image locale de conteneur, ou null si l'URL
+// n'est pas un upload local (URL externe, vide). path.basename neutralise toute
+// tentative de traversal ("/uploads/containers/../../x" -> UPLOAD_ROOT/x).
+const resolveStoredImagePath = (imageUrl) => {
+  if (!imageUrl || !imageUrl.startsWith(LOCAL_IMAGE_PREFIX)) return null;
+  return path.join(UPLOAD_ROOT, path.basename(imageUrl));
+};
+
+// Supprime le fichier image local associe a un conteneur (evite les orphelins).
+const cleanupStoredImage = (imageUrl) => {
+  const filePath = resolveStoredImagePath(imageUrl);
+  if (!filePath) return;
+
+  fs.unlink(filePath, (error) => {
+    if (error && error.code !== 'ENOENT') {
+      console.error('[containerController] Erreur suppression image conteneur :', error.message);
     }
   });
 };
@@ -170,7 +194,7 @@ const saisirContainer = async (req, res) => {
   try {
     // Verification que l'operation referencee existe bien
     const [opRows] = await pool.execute(
-      'SELECT id FROM operations WHERE id = ?',
+      'SELECT id, statut FROM operations WHERE id = ?',
       [operation_id]
     );
 
@@ -179,6 +203,17 @@ const saisirContainer = async (req, res) => {
       return res.status(404).json({
         status  : 'error',
         message : `Operation introuvable (id: ${operation_id}).`,
+      });
+    }
+
+    // Un conteneur ne peut etre rattache qu'a une operation encore en cours :
+    // une operation cloturee ou annulee est figee.
+    if (opRows[0].statut !== 'en cours') {
+      cleanupUploadedFile(req.file);
+      const etat = opRows[0].statut === 'cloturee' ? 'cloturee' : 'annulee';
+      return res.status(409).json({
+        status  : 'error',
+        message : `Impossible d'ajouter un conteneur : l'operation est ${etat}.`,
       });
     }
 
@@ -308,7 +343,7 @@ const deleteContainer = async (req, res) => {
 
   try {
     const [rows] = await pool.execute(
-      'SELECT id FROM container WHERE id = ?',
+      'SELECT id, image_url FROM container WHERE id = ?',
       [id]
     );
 
@@ -320,6 +355,7 @@ const deleteContainer = async (req, res) => {
     }
 
     await pool.execute('DELETE FROM container WHERE id = ?', [id]);
+    cleanupStoredImage(rows[0].image_url);
 
     return res.status(200).json({
       status  : 'success',
@@ -337,4 +373,12 @@ const deleteContainer = async (req, res) => {
   }
 };
 
-module.exports = { saisirContainer, getContainers, deleteContainer };
+module.exports = {
+  saisirContainer,
+  getContainers,
+  deleteContainer,
+  // exportes pour les tests unitaires
+  normalizeIsoTypeCode,
+  resolveStoredImagePath,
+  ISO_TYPE_CODE_FORMAT,
+};
