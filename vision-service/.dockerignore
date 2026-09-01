@@ -1,0 +1,37 @@
+# Environnement virtuel local (recréé dans l'image via pip install)
+.venv/
+venv/
+
+# Caches Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Poids IA : jamais dans l'image, montés via volume au runtime
+models/
+*.pt
+*.onnx
+
+# Sorties de diagnostic local et datasets
+debug/
+datasets/
+runs/
+
+# Secrets & environnement
+.env
+.env.*
+
+# Tests (inutiles en image de production)
+tests/
+
+# Fichiers Docker, Git, éditeur, docs
+Dockerfile
+.dockerignore
+.git/
+.gitignore
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+README.md
