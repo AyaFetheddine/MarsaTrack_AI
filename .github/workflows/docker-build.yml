@@ -1,21 +1,48 @@
-name: CI/CD Backend to Docker Hub
+name: CI/CD MarsaTrack to Docker Hub
 
+# Construit et pousse les images Docker de MarsaTrack sur Docker Hub à chaque
+# push sur main touchant un composant conteneurisé (backend, frontend, vision).
+# La base de données n'a pas d'image dédiée : le docker-compose utilise l'image
+# officielle mysql:8.0 et monte backend/database/init.sql.
 on:
   push:
     branches:
       - main
     paths:
       - 'backend/**'
+      - 'frontend/**'
+      - 'vision-service/**'
       - '.github/workflows/docker-build.yml'
   workflow_dispatch:
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    
+
+    # Une exécution par composant. Les trois images sont construites en
+    # parallèle et poussées sous le même namespace Docker Hub.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: backend
+            context: ./backend
+            image: marsatrack-backend
+          - name: frontend
+            context: ./frontend
+            image: marsatrack-frontend
+          - name: vision-service
+            context: ./vision-service
+            image: marsatrack-vision
+
+    name: ${{ matrix.name }} — Build & Push
+
     steps:
       - name: 📥 Checkout du code
         uses: actions/checkout@v4
+
+      - name: 🔧 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: 🔑 Connexion à Docker Hub
         uses: docker/login-action@v3
@@ -23,9 +50,11 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: 🐳 Build and push de l'image
+      - name: 🐳 Build and push de l'image ${{ matrix.image }}
         uses: docker/build-push-action@v5
         with:
-          context: ./backend
+          context: ${{ matrix.context }}
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/marsatrack-backend:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

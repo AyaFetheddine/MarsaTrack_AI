@@ -1,0 +1,90 @@
+services:
+
+  # ── Base de données MySQL ────────────────────────────────────────────────────
+  # Image officielle : aucune image custom à construire/pousser pour la DB.
+  # Le schéma est initialisé UNE SEULE FOIS (au premier démarrage, volume vide)
+  # via init.sql monté dans /docker-entrypoint-initdb.d.
+  mysql:
+    image: mysql:8.0
+    container_name: marsatrack_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${DB_NAME:-marsatrack_db}
+      MYSQL_USER: ${DB_USER:-marsatrack}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-marsatrackpass}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Backend Node.js / Express ────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: marsatrack_backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_HOST: mysql
+      DB_USER: ${DB_USER:-marsatrack}
+      DB_PASSWORD: ${DB_PASSWORD:-marsatrackpass}
+      DB_NAME: ${DB_NAME:-marsatrack_db}
+      DB_PORT: 3306
+      PORT: 3001
+      CORS_ORIGINS: http://localhost:5173,http://localhost
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: 8h
+      # Le backend joint le service vision par son nom de service Docker.
+      VISION_SERVICE_URL: http://vision:8000
+      VISION_FALLBACK_ENABLED: "false"
+      VISION_TIMEOUT_MS: "180000"
+    ports:
+      - "3001:3001"
+    volumes:
+      # Persister les images de conteneurs uploadées.
+      - ./backend/uploads:/usr/src/app/uploads
+
+  # ── Microservice Vision IA (YOLO11 + PaddleOCR) ──────────────────────────────
+  vision:
+    build:
+      context: ./vision-service
+      dockerfile: Dockerfile
+    container_name: marsatrack_vision
+    restart: unless-stopped
+    environment:
+      VISION_MODEL_VERSION: v2
+      VISION_DEVICE: cpu
+      VISION_OCR_ENABLED: "true"
+      VISION_FALLBACK_ENABLED: "false"
+    ports:
+      - "8000:8000"
+    volumes:
+      # Les poids YOLO (*.pt) ne sont pas dans l'image : fournis ici en lecture
+      # seule. Déposer les fichiers dans ./vision-service/models sur l'hôte.
+      - ./vision-service/models:/app/models:ro
+
+  # ── Frontend React + Nginx ───────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: marsatrack_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    # Exposé sur 5173 côté hôte (cohérent avec le CORS et le port de dev Vite).
+    ports:
+      - "5173:80"
+
+volumes:
+  mysql_data:
