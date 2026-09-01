@@ -43,7 +43,6 @@ function Navbar({ onMenuOpen }) {
               {user.nom_complet || user.matricule}
             </p>
             <div className="mt-0.5 flex items-center justify-end gap-2">
-              <span className="text-xs text-marsa-muted">{user.matricule}</span>
               <span className="rounded-full bg-[#e8f4fb] px-2 py-0.5 text-[11px] font-bold text-marsa-royal">
                 {formatRoleLabel(user.role)}
               </span>

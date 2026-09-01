@@ -269,7 +269,7 @@ CREATE TABLE IF NOT EXISTS sessions_whatsapp (
 INSERT IGNORE INTO users (nom_complet, matricule, role, password_hash)
 VALUES (
   'Administrateur Système',
-  'ADM-001',
+  'admin',
   'Admin',
   '$2b$12$IhIjnd8m0ZSiEmNHFInp0OTjE7OF8B1r8uYFe3MnS6gycm7OUwNhq'
 );
@@ -278,7 +278,7 @@ VALUES (
 INSERT IGNORE INTO users (nom_complet, matricule, role, password_hash)
 VALUES (
   'Responsable Exploitation Test',
-  'RE-001',
+  'responsable',
   'Responsable_Exploitation',
   '$2b$12$IhIjnd8m0ZSiEmNHFInp0OTjE7OF8B1r8uYFe3MnS6gycm7OUwNhq'
 );
@@ -287,7 +287,7 @@ VALUES (
 INSERT IGNORE INTO users (nom_complet, matricule, role, password_hash)
 VALUES (
   'Chef Equipe Test',
-  'CE-001',
+  'chefequipe',
   'Chef_Equipe',
   '$2b$12$IhIjnd8m0ZSiEmNHFInp0OTjE7OF8B1r8uYFe3MnS6gycm7OUwNhq'
 );
@@ -296,7 +296,7 @@ VALUES (
 INSERT IGNORE INTO users (nom_complet, matricule, role, password_hash)
 VALUES (
   'Portiqueur Test',
-  'PQ-001',
+  'portiqueur',
   'Portiqueur',
   '$2b$12$IhIjnd8m0ZSiEmNHFInp0OTjE7OF8B1r8uYFe3MnS6gycm7OUwNhq'
 );
@@ -305,7 +305,7 @@ VALUES (
 INSERT IGNORE INTO users (nom_complet, matricule, role, password_hash)
 VALUES (
   'Chef Services Test',
-  'CS-001',
+  'chefservices',
   'Chef_Services',
   '$2b$12$IhIjnd8m0ZSiEmNHFInp0OTjE7OF8B1r8uYFe3MnS6gycm7OUwNhq'
 );
