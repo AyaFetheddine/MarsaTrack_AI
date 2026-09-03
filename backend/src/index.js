@@ -17,6 +17,7 @@ const userRoutes      = require('./routes/userRoutes');
 const personnelRoutes = require('./routes/personnelRoutes');
 const visionRoutes    = require('./routes/visionRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const integrationRoutes = require('./routes/integrationRoutes');
 
 // ─── Initialisation de l'application Express ────────────────────────────────
 const app = express();
@@ -74,6 +75,9 @@ app.use('/api/personnel', personnelRoutes);
 
 // Vue synthetique du dashboard : compteurs agreges (tous roles authentifies)
 app.use('/api/dashboard', dashboardRoutes);
+
+// Integration inter-services (MarsaBot Factory) : lecture seule, jeton de service.
+app.use('/api/integration', integrationRoutes);
 
 /**
  * Health Check — GET /api/health
