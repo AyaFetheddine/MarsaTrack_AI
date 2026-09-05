@@ -2,12 +2,15 @@ import { LogOut, Menu } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { clearAuthSession, formatRoleLabel, getStoredUser } from '../utils/auth'
 
-const pageTitles = {
-  '/dashboard': 'Dashboard',
-  '/operations': 'Opérations',
-  '/arrets': 'Arrêts de travail',
-  '/containers': 'Conteneurs',
-  '/personnel': 'Personnel',
+/**
+ * Module de MarsaPort AI auquel appartient la page affichee.
+ *
+ * La barre superieure repond a la question "dans quel module suis-je ?", et
+ * non "sur quelle page suis-je ?" : chaque page porte deja son propre titre,
+ * le repeter ici ferait doublon.
+ */
+function moduleCourant(pathname) {
+  return pathname.startsWith('/bots') ? 'MarsaBot Factory' : 'MarsaTrack AI'
 }
 
 function Navbar({ onMenuOpen }) {
@@ -31,9 +34,9 @@ function Navbar({ onMenuOpen }) {
         >
           <Menu size={21} />
         </button>
-        <h1 className="truncate text-[15px] font-bold text-marsa-royal">
-          {pageTitles[location.pathname] || 'MarsaTrack AI'}
-        </h1>
+        <p className="truncate text-[15px] font-bold text-marsa-royal">
+          {moduleCourant(location.pathname)}
+        </p>
       </div>
 
       <div className="flex min-w-0 items-center gap-3">

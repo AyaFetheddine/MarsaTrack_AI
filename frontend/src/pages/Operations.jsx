@@ -1,5 +1,6 @@
 import { Ban, ClipboardCheck, LoaderCircle, Search, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   getApiErrorMessage,
   operationsApi,
@@ -102,11 +103,11 @@ const formatDate = (value) => {
 
 function Operations() {
   const role = getStoredRole()
-  const canCreateOperation = [
-    'Admin',
-    'Responsable_Exploitation',
-    'Chef_Equipe',
-  ].includes(role)
+  // Ouvrir une operation, c'est aussi y affecter du personnel : le formulaire
+  // exige au moins un membre. Cette affectation releve du planificateur, seul
+  // habilite a gerer le personnel. Le terrain documente l'operation (arrets,
+  // conteneurs), il n'en definit pas le perimetre.
+  const canCreateOperation = ['Admin', 'Responsable_Exploitation'].includes(role)
   const canCloseOperation = ['Admin', 'Chef_Services'].includes(role)
   const canCancelOperation = ['Admin', 'Responsable_Exploitation'].includes(role)
   const canDeleteOperation = role === 'Admin'
@@ -749,7 +750,19 @@ function Operations() {
         <section className="page-card border-dashed">
           <h3 className="font-bold text-marsa-royal">Consultation uniquement</h3>
           <p className="mt-1 text-sm text-marsa-muted">
-            Votre rôle permet la consultation, mais pas cette action.
+            L&apos;ouverture d&apos;une opération relève du Responsable
+            d&apos;exploitation, qui y affecte le personnel.
+            {role === 'Chef_Equipe' ? (
+              <>
+                {' '}
+                Votre rôle intervient ensuite sur les opérations en cours :
+                déclarez et clôturez les{' '}
+                <Link className="font-semibold text-marsa-royal underline" to="/arrets">
+                  arrêts de travail
+                </Link>
+                .
+              </>
+            ) : null}
           </p>
         </section>
       )}
@@ -769,8 +782,8 @@ function Operations() {
             Aucune opération enregistrée.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="data-table min-w-[1250px]">
+          <div className="table-scroll">
+            <table className="data-table min-w-[1040px]">
               <thead>
                 <tr>
                   <th>Opération</th>

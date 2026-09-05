@@ -50,10 +50,11 @@ function Login() {
 
         <div className="mb-8 text-center">
           <h1 className="mb-1.5 text-2xl font-bold text-marsa-royal">
-            MarsaTrack AI
+            MarsaPort AI
           </h1>
           <p className="text-sm text-marsa-muted">
-            Gestion opérationnelle et suivi terrain
+            Gestion opérationnelle, vision par ordinateur et assistants
+            conversationnels
           </p>
         </div>
 

@@ -3,6 +3,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import RoleRoute from './components/RoleRoute'
 import DashboardLayout from './layouts/DashboardLayout'
 import Arrets from './pages/Arrets'
+import { BaseConnaissances, MesBots, ParametresBots } from './pages/Assistants'
 import Containers from './pages/Containers'
 import Dashboard from './pages/Dashboard'
 import Login from './pages/Login'
@@ -16,14 +17,12 @@ function App() {
     'Chef_Services',
     'Portiqueur',
     'Responsable_Exploitation',
-    'Chef_Escale',
   ]
   const arretsRoles = [
     'Admin',
     'Chef_Equipe',
     'Chef_Services',
     'Responsable_Exploitation',
-    'Chef_Escale',
   ]
   const containersRoles = [
     'Admin',
@@ -37,6 +36,9 @@ function App() {
     'Chef_Services',
     'Responsable_Exploitation',
   ]
+  // La console d'assistants est un outil d'administration : elle reste
+  // reservee a l'Admin, comme la gestion des bots cote MarsaBot Factory.
+  const assistantsRoles = ['Admin']
 
   return (
     <Routes>
@@ -56,6 +58,11 @@ function App() {
           </Route>
           <Route element={<RoleRoute allowedRoles={personnelRoles} />}>
             <Route path="/personnel" element={<Personnel />} />
+          </Route>
+          <Route element={<RoleRoute allowedRoles={assistantsRoles} />}>
+            <Route path="/bots" element={<MesBots />} />
+            <Route path="/bots/connaissances" element={<BaseConnaissances />} />
+            <Route path="/bots/parametres" element={<ParametresBots />} />
           </Route>
         </Route>
       </Route>
