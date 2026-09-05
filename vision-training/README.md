@@ -18,15 +18,53 @@ Image
 -> validation ou correction par le portiqueur
 ```
 
-## Classe YOLO
+## Deux versions du modele
 
-Une seule classe est utilisee pour le MVP :
+Le detecteur a ete entraine en deux temps. **Les deux versions sont conservees**, et le service Vision les utilise toutes les deux : la V2 en production, la V1 en repli controle si la V2 devient indisponible.
+
+| | **V2 — en production** | V1 — repli |
+| --- | --- | --- |
+| Classes | `container-number` + `iso-type` | `container_code` seul |
+| Detecte | le matricule **et** le code taille/type | le matricule seul |
+| Configuration | `config/container_code_type_v2.yaml` | `config/container_code.yaml` |
+| Notebook | `notebooks/train_yolo11_container_code_type_v2.ipynb` | `notebooks/train_yolo11_container_code.ipynb` |
+| Poids attendu | `container_code_type_yolo11n_v2_best.pt` | `container_code_yolo11n_best.pt` |
+
+La V2 est nee d'un besoin metier apparu apres la V1 : le code taille/type (`22G1`) doit etre releve en meme temps que le matricule. Plutot que d'ajouter un second modele, une seule detection a deux classes a ete reentrainee.
+
+## Classes YOLO
+
+**V2 (deux classes)** :
+
+```txt
+0 container-number
+1 iso-type
+```
+
+**V1 (une classe)** :
 
 ```txt
 0 container_code
 ```
 
-Cette classe represente toute la zone du matricule ISO visible sur le conteneur. Il ne faut pas creer une classe par caractere.
+Une classe represente toute la zone du marquage, jamais un caractere isole. Le modele **localise** ; c'est PaddleOCR qui **lit**.
+
+## Resultats de l'entrainement V2
+
+Entrainement sur Kaggle, **26 minutes sur 2 GPU Tesla T4**, 70 epoques, images redimensionnees a 640 px.
+
+Dataset Roboflow `Container-Shipping-Number2-1` : 745 images sources, 1 931 apres augmentation (1 779 entrainement, 115 validation, 37 test), 1 973 annotations `container-number` et 1 749 `iso-type`.
+
+Mesures sur le jeu de test (37 images, 73 instances) :
+
+| Metrique | Global | container-number | iso-type |
+| --- | --- | --- | --- |
+| Precision | 94,4 % | 94,9 % | 93,9 % |
+| Recall | ~100 % | 100 % | 100 % |
+| mAP50 | 99,2 % | 99,2 % | 99,2 % |
+| mAP50-95 | 86,5 % | 87,1 % | 85,8 % |
+
+Le notebook versionne conserve le code et les journaux d'entrainement. Les apercus d'images ont ete retires : ils pesaient 6 Mo a eux seuls, sans apporter d'information que les metriques ci-dessus ne donnent deja.
 
 ## Structure
 
@@ -44,13 +82,15 @@ vision-training/
 │       ├── val/
 │       └── test/
 ├── config/
-│   └── container_code.yaml
+│   ├── container_code.yaml              # V1, une classe
+│   └── container_code_type_v2.yaml      # V2, deux classes (production)
 ├── scripts/
 │   ├── validate_dataset.py
 │   ├── inspect_labels.py
 │   └── split_dataset.py
 ├── notebooks/
-│   └── train_yolo11_container_code.ipynb
+│   ├── train_yolo11_container_code.ipynb
+│   └── train_yolo11_container_code_type_v2.ipynb
 ├── models/
 │   └── .gitkeep
 └── results/

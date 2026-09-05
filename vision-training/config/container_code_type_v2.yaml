@@ -1,0 +1,22 @@
+# Configuration du dataset pour le modele V2 (deux classes).
+#
+# Le modele V2 est celui utilise en production par le service Vision. Il
+# localise deux zones distinctes sur une image de conteneur :
+#   - container-number : le matricule ISO 6346 (ex: SESU2072393)
+#   - iso-type         : le code taille/type (ex: 22G1)
+#
+# La configuration V1, a une seule classe, est conservee dans
+# container_code.yaml : le modele V1 reste le repli du service.
+#
+# Le dataset est importe depuis Roboflow au debut du notebook
+# notebooks/train_yolo11_container_code_type_v2.ipynb. Adapter ce chemin
+# selon l'emplacement reel du dataset dans l'environnement d'entrainement.
+path: /kaggle/working/Container-Shipping-Number2-1
+train: train/images
+val: valid/images
+test: test/images
+
+nc: 2
+names:
+  0: container-number
+  1: iso-type
