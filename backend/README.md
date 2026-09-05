@@ -42,7 +42,7 @@ conteneur ne peut y etre rattache.
 | GET POST PUT DELETE | `/api/arrets`, `/:id/cloturer`, `/:id` | selon role |
 | GET POST DELETE | `/api/containers`, `/:id` | selon role |
 | POST | `/api/vision/detect-container` | Admin, Portiqueur |
-| GET | `/api/personnel`, `/api/users/personnel` | selon role |
+| GET | `/api/personnel` | selon role |
 | GET | `/api/dashboard/stats` | tout utilisateur authentifie |
 | GET | `/api/integration/etat-operationnel` | jeton de service |
 
