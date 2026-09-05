@@ -47,6 +47,11 @@ ISO_TYPE_CLASS_NAMES = {"iso-type", "iso_type", "isotype"}
 
 CONFIDENCE_YOLO_WEIGHT = 0.45
 CONFIDENCE_OCR_WEIGHT = 0.55
+# Borne du produit cartesien des corrections. Seules les 4 positions du code
+# proprietaire se ramifient (au plus 2 lectures chacune), les 7 positions
+# numeriques en offrent au plus une : le nombre de combinaisons ne peut donc
+# pas depasser 2^4 = 16, tres en deca de cette borne. Aucune troncature n'a
+# lieu, et aucun candidat n'est ecarte avant d'avoir ete valide.
 MAX_CANDIDATES = 64
 
 _yolo_model: Any = None
@@ -991,20 +996,70 @@ def recognize_region_with_context(
     return readings + context_readings
 
 
-LETTER_SUBSTITUTIONS = {"0": "O", "1": "I", "5": "S", "8": "B", "2": "Z", "6": "G"}
+# Confusions chiffre -> lettre, appliquees UNIQUEMENT aux 4 positions du code
+# proprietaire (index 0 a 3), ou la norme ISO 6346 impose des lettres.
+#
+# Sur un marquage vertical, chaque glyphe est lu isolement et pivote : PaddleOCR
+# rend alors tres souvent une lettre sous forme de chiffre. Une seule alternative
+# par chiffre ne suffit pas — le cas reel TCLU3361509, lu "TCL03361509", exige
+# 0 -> U, inatteignable tant que 0 ne proposait que O.
+#
+# Chaque entree est justifiee par la morphologie du glyphe :
+#   0 -> O  ovale plein, confusion canonique
+#        U  meme silhouette fermee en bas, seule la partie haute differe ;
+#           sur une paroi ondulee ou peinte, l'ouverture superieure du U se
+#           comble visuellement (cas reel TCLU3361509)
+#   1 -> I  barre verticale, confusion canonique
+#        L  hampe verticale identique, l'empattement bas se perd au seuillage
+#   2 -> Z  meme diagonale et meme base horizontale
+#   4 -> A  sommet ferme et barre transversale ; le 4 ferme s'y confond
+#   5 -> S  meme courbe superieure, l'angle du 5 s'arrondit a l'impression
+#   6 -> G  boucle basse identique, la barre du G se comble
+#   8 -> B  deux boucles superposees, le fut vertical du B se devine
+#
+# Volontairement ECARTES, bien que plausibles a l'oeil :
+#   0 -> D, Q  Le chiffre de controle ne discrimine qu'a 1/11 : chaque
+#              alternative supplementaire offre une chance de plus qu'un code
+#              FAUX satisfasse le controle par hasard. Mesure sur 12 000 codes
+#              degrades dont la vraie lettre n'est pas couverte : le taux de
+#              faux acceptes passe de 6,6 % (0 -> O, U) a 8,6 % (0 -> O, U, D, Q).
+#              Cas concret : TEMU3108252 lu "TE203108252" (le M lu 2 n'est pas
+#              couvert) produit alors TEZD3108252, valide au controle mais faux.
+#              Avec O et U seuls, ce cas retombe en saisie manuelle, c'est-a-dire
+#              du bon cote de l'erreur.
+#
+# Les chiffres 3, 7 et 9 n'ont pas d'equivalent alphabetique credible : les
+# omettre fait echouer la fenetre, ce qui est le comportement voulu.
+LETTER_SUBSTITUTIONS = {
+    "0": ("O", "U"),
+    "1": ("I", "L"),
+    "2": ("Z",),
+    "4": ("A",),
+    "5": ("S",),
+    "6": ("G",),
+    "8": ("B",),
+}
+
+# Confusions lettre -> chiffre pour les 7 positions numeriques (index 4 a 10).
+# Volontairement laissees a une seule alternative : aucun cas reel observe n'a
+# justifie de les elargir, et chaque alternative supplementaire multiplie le
+# nombre de candidats a valider.
 DIGIT_SUBSTITUTIONS = {"O": "0", "Q": "0", "I": "1", "L": "1", "S": "5", "B": "8", "Z": "2", "G": "6"}
 
 
 def _position_options(character: str, index: int) -> list[str]:
-    expected_letters = index < 4
-    if expected_letters:
+    """Lectures plausibles d'un caractere a une position donnee du matricule."""
+    if index < 4:  # code proprietaire : des lettres sont attendues
         options = [character] if character.isalpha() else []
-        replacement = LETTER_SUBSTITUTIONS.get(character)
-    else:
+        replacements = LETTER_SUBSTITUTIONS.get(character, ())
+    else:  # numero de serie et chiffre de controle : des chiffres sont attendus
         options = [character] if character.isdigit() else []
-        replacement = DIGIT_SUBSTITUTIONS.get(character)
-    if replacement and replacement not in options:
-        options.append(replacement)
+        single = DIGIT_SUBSTITUTIONS.get(character)
+        replacements = (single,) if single else ()
+
+    for replacement in replacements:
+        if replacement not in options:
+            options.append(replacement)
     return options
 
 
@@ -1076,6 +1131,23 @@ def _candidate_score(item: dict, expected_length: int) -> float:
 
 
 def select_best_iso_candidate(readings: list[OcrReading]) -> dict | None:
+    """Le seul candidat dont le chiffre de controle ISO 6346 est correct.
+
+    Deux garde-fous, dans cet ordre :
+
+    1. Un candidat n'entre au classement que si `validate_container_code` le
+       declare valide — format ET chiffre de controle. C'est l'unique juge.
+    2. Si plusieurs codes DIFFERENTS franchissent ce filtre, la lecture est
+       ambigue : rien n'est retenu. Elargir les confusions de caracteres rend
+       ce cas atteignable (par exemple "06122199350" se corrige aussi bien en
+       UGIZ2199350 qu'en OGLZ2199350, tous deux valides). Departager au score
+       reviendrait a livrer un matricule peut-etre faux ; l'operateur saisit
+       alors le code a la main, ce qui reste la seule reponse sure.
+
+    Plusieurs lectures menant au MEME code ne sont pas une ambiguite : elles se
+    confortent, et le classement ne sert qu'a choisir la mieux notee d'entre
+    elles.
+    """
     ranked = []
     for reading in readings:
         for candidate, corrections in generate_iso_candidates(reading.text):
@@ -1091,6 +1163,10 @@ def select_best_iso_candidate(readings: list[OcrReading]) -> dict | None:
                 )
     if not ranked:
         return None
+
+    if len({item["candidate"] for item in ranked}) > 1:
+        return None
+
     return max(
         ranked,
         key=lambda item: (

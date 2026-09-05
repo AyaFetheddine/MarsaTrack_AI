@@ -1015,3 +1015,86 @@ def test_real_model_optional(monkeypatch, tmp_path):
     service.reset_runtime_state()
     result = service.detect_container(make_image_bytes(320, 160))
     assert result["detection_mode"] in {"no_detection", "ocr_disabled"}
+
+
+# ─── Matricule vertical : lettres du code proprietaire lues comme chiffres ────
+# Sur un marquage vertical, PaddleOCR lit tres souvent les 4 lettres du code
+# proprietaire comme des chiffres (U -> 0, I -> 0, L -> 1 ...). Le pipeline doit
+# pouvoir remonter au vrai code, SANS jamais accepter une correction dont le
+# chiffre de controle ISO 6346 serait faux.
+
+
+def test_vertical_confusion_zero_u_recovers_tclu():
+    """Cas reel : TCLU3361509 lu 'TCL03361509' (U lu 0)."""
+    best = service.select_best_iso_candidate([reading("TCL03361509")])
+
+    assert best is not None, "aucun candidat : le U n'est pas atteignable depuis 0"
+    assert best["candidate"] == "TCLU3361509"
+    assert validate_container_code(best["candidate"])["is_valid"]
+
+
+def test_vertical_lfiu_stays_manual_documented_limit():
+    """Limite connue : LFIU2043087 lu 'LF002043087' n'est pas recuperable.
+
+    Le U lu 0 est couvert, mais pas le I lu 0 : un I est une barre verticale,
+    un 0 un ovale, la confusion n'est pas defendable morphologiquement et
+    l'inscrire dans la table ferait accepter des codes faux ailleurs. Le
+    comportement attendu est donc la saisie manuelle, jamais un code invente.
+    """
+    assert service.select_best_iso_candidate([reading("LF002043087")]) is None
+
+
+def test_unreachable_letter_never_yields_a_lucky_valid_code():
+    """Garde-fou : une lettre non couverte ne doit pas produire un code faux.
+
+    TEMU3108252 lu 'TE203108252' : le M lu 2 n'est pas une confusion couverte,
+    le vrai code est donc hors d'atteinte. Elargir '0' a D et Q ferait alors
+    apparaitre TEZD3108252, dont le chiffre de controle est valide par hasard.
+    Livrer ce code serait exactement le risque "ISO valide mais OCR faux" :
+    la seule reponse acceptable est de ne rien retenir.
+    """
+    best = service.select_best_iso_candidate([reading("TE203108252")])
+
+    assert best is None, f"code faux accepte : {best['candidate'] if best else None}"
+
+
+def test_ambiguous_candidates_from_one_reading_are_refused():
+    """Deux corrections differentes donnent deux codes ISO valides : on refuse.
+
+    '06122199350' peut se corriger en UGIZ2199350 (le vrai code) comme en
+    OGLZ2199350, tous deux valides au sens du chiffre de controle. Choisir
+    l'un des deux reviendrait a livrer un matricule potentiellement faux :
+    la seule reponse sure est de ne rien retenir et de basculer en saisie
+    manuelle.
+    """
+    candidats = service.generate_iso_candidates("06122199350")
+    valides = {code for code, _ in candidats if validate_container_code(code)["is_valid"]}
+
+    assert len(valides) >= 2, f"cas non ambigu, candidats valides : {valides}"
+    assert service.select_best_iso_candidate([reading("06122199350")]) is None
+
+
+def test_ambiguous_candidates_from_several_readings_are_refused():
+    """Deux lectures produisant deux codes valides differents : on refuse."""
+    readings = [reading("MRKU6234191"), reading("BBCU2172418")]
+
+    assert service.select_best_iso_candidate(readings) is None
+
+
+def test_vertical_code_already_correct_is_not_over_corrected():
+    """Un matricule vertical deja bien lu ne doit subir aucune correction."""
+    best = service.select_best_iso_candidate([reading("TCLU3361509")])
+
+    assert best is not None
+    assert best["candidate"] == "TCLU3361509"
+    assert best["corrections"] == 0
+
+
+@pytest.mark.parametrize("code", ["BBCU2172418", "MRSU6010390", "MRKU6234191"])
+def test_horizontal_valid_codes_stay_unchanged(code):
+    """Non-regression : les codes horizontaux deja valides restent identiques."""
+    best = service.select_best_iso_candidate([reading(code)])
+
+    assert best is not None
+    assert best["candidate"] == code
+    assert best["corrections"] == 0
