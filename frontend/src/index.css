@@ -60,12 +60,28 @@
     @apply bg-[#f5f9fd] text-xs uppercase text-[#5b7a99];
   }
 
+  /* Cadre de defilement des tableaux larges.
+     Sans hauteur bornee, la barre de defilement horizontale se retrouve sous
+     la derniere ligne : sur une liste longue, elle sort de l'ecran et
+     l'utilisateur ne la trouve plus. En bornant la hauteur, la barre reste
+     visible en bas du cadre, et l'en-tete colle en haut pendant le
+     defilement, de sorte que les colonnes restent identifiables. */
+  .table-scroll {
+    @apply max-h-[65vh] overflow-auto;
+  }
+
+  .table-scroll thead th {
+    @apply sticky top-0 z-10 bg-[#f5f9fd];
+  }
+
+  /* Remplissage horizontal resserre : sur les tableaux larges, chaque colonne
+     coutait 32 px de marge laterale. */
   .data-table th {
-    @apply border-b border-marsa-border px-4 py-3 font-bold;
+    @apply border-b border-marsa-border px-3 py-3 font-bold;
   }
 
   .data-table td {
-    @apply border-b border-[#eaf1f7] px-4 py-3.5 text-[#345270];
+    @apply border-b border-[#eaf1f7] px-3 py-3.5 text-[#345270];
   }
 
   .data-table tbody tr:last-child td {

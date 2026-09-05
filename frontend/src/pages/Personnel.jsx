@@ -539,8 +539,8 @@ function Personnel() {
                 Aucun personnel ne correspond à votre recherche.
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="data-table min-w-[900px]">
+              <div className="table-scroll">
+                <table className="data-table min-w-[820px]">
                   <thead>
                     <tr>
                       <th>Matricule</th>

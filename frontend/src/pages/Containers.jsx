@@ -1260,8 +1260,8 @@ function Containers() {
             Aucun conteneur enregistré.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="data-table min-w-[1120px]">
+          <div className="table-scroll">
+            <table className="data-table min-w-[1000px]">
               <thead>
                 <tr>
                   <th>Matricule ISO</th>

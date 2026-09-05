@@ -5,37 +5,24 @@ import {
   Download,
   HardHat,
   OctagonAlert,
+  ScanSearch,
   Timer,
   Upload,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import {
-  containersApi,
-  dashboardApi,
-  getApiErrorMessage,
-  operationsApi,
-} from '../api/api'
+import { dashboardApi, getApiErrorMessage } from '../api/api'
 import FeedbackMessage from '../components/FeedbackMessage'
 import Loader from '../components/Loader'
 import StatCard from '../components/StatCard'
 import useAutoClearMessage from '../hooks/useAutoClearMessage'
-import { getStoredRole } from '../utils/auth'
 
 function Dashboard() {
-  const role = getStoredRole()
-  // Les conteneurs restent limites aux roles qui ont acces a la page dediee.
-  // Les compteurs « Arrets en cours » et « Personnel disponible » proviennent
-  // desormais d'un endpoint agrege (/api/dashboard/stats) accessible a tous
-  // les roles : on affiche le nombre reel sans exposer les listes detaillees.
-  const canViewContainers = [
-    'Admin',
-    'Responsable_Exploitation',
-    'Chef_Services',
-    'Portiqueur',
-  ].includes(role)
-
-  const [operations, setOperations] = useState([])
-  const [containers, setContainers] = useState([])
+  // Tous les indicateurs viennent de /api/dashboard/stats, accessible a tout
+  // utilisateur authentifie. Ce sont des compteurs agreges, sans donnee
+  // nominative ni detail d'enregistrement : chaque role voit donc les memes
+  // chiffres. Les recalculer depuis les listes detaillees obligeait a masquer
+  // certaines cases pour les roles sans acces a ces listes, ce qui affichait
+  // des tirets sans raison.
   const [overview, setOverview] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -45,16 +32,8 @@ function Dashboard() {
   useEffect(() => {
     const loadDashboard = async () => {
       try {
-        const [operationsResponse, containersResponse, statsResponse] =
-          await Promise.all([
-            operationsApi.list(),
-            canViewContainers ? containersApi.list() : Promise.resolve(null),
-            dashboardApi.stats(),
-          ])
-
-        setOperations(operationsResponse.data.data || [])
-        setContainers(containersResponse?.data.data || [])
-        setOverview(statsResponse.data.data || null)
+        const response = await dashboardApi.stats()
+        setOverview(response.data.data || null)
       } catch (requestError) {
         setError(
           getApiErrorMessage(
@@ -68,69 +47,62 @@ function Dashboard() {
     }
 
     loadDashboard()
-  }, [canViewContainers])
+  }, [])
 
-  const activeOperations = operations.filter(
-    (operation) => operation.statut === 'en cours',
-  ).length
-  const closedOperations = operations.filter(
-    (operation) => operation.statut === 'cloturee',
-  ).length
-  const importContainers = canViewContainers
-    ? containers.filter(
-        (container) => (container.mouvement || 'IMPORT') === 'IMPORT',
-      ).length
-    : '-'
-  const exportContainers = canViewContainers
-    ? containers.filter((container) => container.mouvement === 'EXPORT').length
-    : '-'
+  const compteur = (cle) => overview?.[cle] ?? 0
 
   const stats = [
     {
       title: 'Total opérations',
-      value: operations.length,
+      value: compteur('operations_total'),
       icon: ClipboardList,
       accentClass: 'bg-[#e8f1fb] text-marsa-royal',
     },
     {
       title: 'Opérations en cours',
-      value: activeOperations,
+      value: compteur('operations_en_cours'),
       icon: Timer,
       accentClass: 'bg-[#e5f7fb] text-marsa-ciel',
     },
     {
       title: 'Opérations clôturées',
-      value: closedOperations,
+      value: compteur('operations_cloturees'),
       icon: CircleCheck,
       accentClass: 'bg-[#e7f7ef] text-[#148354]',
     },
     {
       title: 'Arrêts en cours',
-      value: overview?.arrets_en_cours ?? '-',
+      value: compteur('arrets_en_cours'),
       icon: OctagonAlert,
       accentClass: 'bg-[#fff1e8] text-[#c45a12]',
     },
     {
       title: 'Conteneurs saisis',
-      value: canViewContainers ? containers.length : '-',
+      value: compteur('conteneurs_total'),
       icon: Boxes,
       accentClass: 'bg-[#eef2f6] text-[#4a6582]',
     },
     {
+      title: 'Conteneurs reconnus par l’IA',
+      value: compteur('conteneurs_reconnus_ia'),
+      icon: ScanSearch,
+      accentClass: 'bg-[#ede9fe] text-[#5b3fbe]',
+    },
+    {
       title: 'Conteneurs import',
-      value: importContainers,
+      value: compteur('conteneurs_import'),
       icon: Download,
       accentClass: 'bg-[#e8f4fd] text-[#0055b3]',
     },
     {
       title: 'Conteneurs export',
-      value: exportContainers,
+      value: compteur('conteneurs_export'),
       icon: Upload,
       accentClass: 'bg-[#fff6df] text-[#9c6500]',
     },
     {
       title: 'Personnel disponible',
-      value: overview?.personnel_disponible ?? '-',
+      value: compteur('personnel_disponible'),
       icon: HardHat,
       accentClass: 'bg-[#e7f7ef] text-[#148354]',
     },
@@ -140,7 +112,7 @@ function Dashboard() {
     <div className="space-y-6">
       <header>
         <h2 className="mb-1 text-2xl font-bold text-marsa-royal">
-          Vue d'ensemble
+          Tableau de bord
         </h2>
         <p className="text-sm text-marsa-muted">
           Suivi synthétique de l'activité opérationnelle du terminal.

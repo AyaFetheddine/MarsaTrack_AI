@@ -326,8 +326,8 @@ function Arrets() {
             Aucun arrêt enregistré.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="data-table min-w-[1100px]">
+          <div className="table-scroll">
+            <table className="data-table min-w-[980px]">
               <thead>
                 <tr>
                   <th>Opération</th>

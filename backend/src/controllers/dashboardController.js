@@ -27,7 +27,9 @@ const getDashboardStats = async (req, res) => {
          (SELECT COUNT(*) FROM personnel WHERE disponibilite = 'disponible') AS personnel_disponible,
          (SELECT COUNT(*) FROM container)                                    AS conteneurs_total,
          (SELECT COUNT(*) FROM container WHERE mouvement = 'IMPORT')         AS conteneurs_import,
-         (SELECT COUNT(*) FROM container WHERE mouvement = 'EXPORT')         AS conteneurs_export`
+         (SELECT COUNT(*) FROM container WHERE mouvement = 'EXPORT')         AS conteneurs_export,
+         (SELECT COUNT(*) FROM container
+           WHERE detection_source IN ('IA_VALIDEE', 'IA_CORRIGEE'))          AS conteneurs_reconnus_ia`
     );
 
     const raw = rows[0] || {};

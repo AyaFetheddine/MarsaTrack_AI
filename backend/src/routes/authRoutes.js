@@ -12,6 +12,12 @@ const loginLimiter = rateLimit({
   limit: Number(process.env.LOGIN_RATE_MAX) || 10,
   standardHeaders: true,
   legacyHeaders: false,
+  // Seules les tentatives ECHOUEES sont comptees. La protection vise le
+  // devinement de mot de passe, or une connexion reussie n'en est pas une :
+  // la compter penalisait des usages legitimes, comme plusieurs personnes
+  // derriere la meme adresse ou un utilisateur changeant de compte. Le
+  // plafond s'applique donc a ce qu'il doit reellement freiner.
+  skipSuccessfulRequests: true,
   message: {
     status: 'error',
     message: 'Trop de tentatives de connexion. Reessayez dans quelques minutes.',
