@@ -1033,15 +1033,18 @@ def test_vertical_confusion_zero_u_recovers_tclu():
     assert validate_container_code(best["candidate"])["is_valid"]
 
 
-def test_vertical_lfiu_stays_manual_documented_limit():
-    """Limite connue : LFIU2043087 lu 'LF002043087' n'est pas recuperable.
+def test_vertical_confusion_zero_i_and_zero_u_recovers_lfiu():
+    """Cas reel : LFIU2043087 lu 'LF002043087' (I lu 0 ET U lu 0).
 
-    Le U lu 0 est couvert, mais pas le I lu 0 : un I est une barre verticale,
-    un 0 un ovale, la confusion n'est pas defendable morphologiquement et
-    l'inscrire dans la table ferait accepter des codes faux ailleurs. Le
-    comportement attendu est donc la saisie manuelle, jamais un code invente.
+    Deux lettres du code proprietaire sont lues comme des chiffres dans la meme
+    lecture. La table doit permettre de remonter au vrai code, sans qu'aucun
+    autre candidat ne satisfasse le chiffre de controle.
     """
-    assert service.select_best_iso_candidate([reading("LF002043087")]) is None
+    best = service.select_best_iso_candidate([reading("LF002043087")])
+
+    assert best is not None, "aucun candidat : ni I ni U ne sont atteignables depuis 0"
+    assert best["candidate"] == "LFIU2043087"
+    assert validate_container_code(best["candidate"])["is_valid"]
 
 
 def test_unreachable_letter_never_yields_a_lucky_valid_code():

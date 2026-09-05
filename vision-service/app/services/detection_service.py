@@ -1009,6 +1009,13 @@ def recognize_region_with_context(
 #        U  meme silhouette fermee en bas, seule la partie haute differe ;
 #           sur une paroi ondulee ou peinte, l'ouverture superieure du U se
 #           comble visuellement (cas reel TCLU3361509)
+#        I  justification empirique et non morphologique : la confusion a ete
+#           OBSERVEE sur un conteneur reel du projet (LFIU2043087, lu
+#           "LF002043087"). En lecture verticale chaque glyphe est segmente et
+#           lu isolement, sans contexte : un I au pochoir, barre etroite bordee
+#           d'empattements, forme alors une silhouette fermee que le moteur
+#           rend en 0. Cout mesure sur 12 000 codes degrades : recuperation
+#           99,1 % -> 98,9 %, faux acceptes 6,6 % -> 6,7 %. Negligeable.
 #   1 -> I  barre verticale, confusion canonique
 #        L  hampe verticale identique, l'empattement bas se perd au seuillage
 #   2 -> Z  meme diagonale et meme base horizontale
@@ -1031,7 +1038,7 @@ def recognize_region_with_context(
 # Les chiffres 3, 7 et 9 n'ont pas d'equivalent alphabetique credible : les
 # omettre fait echouer la fenetre, ce qui est le comportement voulu.
 LETTER_SUBSTITUTIONS = {
-    "0": ("O", "U"),
+    "0": ("O", "U", "I"),
     "1": ("I", "L"),
     "2": ("Z",),
     "4": ("A",),

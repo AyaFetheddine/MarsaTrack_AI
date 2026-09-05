@@ -257,7 +257,7 @@ Le pipeline propose donc des lectures alternatives, **uniquement aux quatre posi
 
 | Chiffre lu | Lettres proposees | Justification morphologique |
 |---|---|---|
-| `0` | `O`, `U` | ovale plein ; silhouette du `U` fermee en bas, son ouverture superieure se comble sur une paroi ondulee ou peinte |
+| `0` | `O`, `U`, `I` | ovale plein ; silhouette du `U` fermee en bas, son ouverture superieure se comble sur une paroi ondulee ou peinte. Le `I` repose sur une justification **empirique** : la confusion a ete observee sur un conteneur reel (`LFIU2043087`, lu `LF002043087`). En lecture verticale chaque glyphe est segmente et lu isolement, sans contexte, et un `I` au pochoir borde d'empattements forme une silhouette fermee |
 | `1` | `I`, `L` | barre verticale ; l'empattement bas du `L` se perd au seuillage |
 | `2` | `Z` | meme diagonale, meme base horizontale |
 | `4` | `A` | sommet ferme et barre transversale |
@@ -276,21 +276,25 @@ Elle est appliquee dans **`select_best_iso_candidate`**, et c'est le point fort 
 
 Le risque `is_valid_iso = true` alors que l'OCR s'est trompe est ainsi contenu, jamais elimine : le chiffre de controle ne discrimine qu'a **1/11**. C'est pourquoi la table reste volontairement etroite, et pourquoi la correction manuelle demeure la voie de repli normale.
 
-### Pourquoi la table n'est pas plus large
+### Ou s'arrete la table, et pourquoi
 
-`D` et `Q` ont ete envisages puis **ecartes** pour `0`. Chaque alternative supplementaire offre une chance de plus qu'un code faux satisfasse le controle par hasard. Mesure sur 12 000 codes degrades dont la vraie lettre n'est pas couverte par la table :
+Chaque alternative supplementaire offre une chance de plus qu'un code **faux** satisfasse le chiffre de controle par hasard. Toute entree candidate est donc mesuree avant d'etre retenue, sur 12 000 codes degrades :
 
-| Table | Recuperation (lettre couverte) | Codes faux acceptes (lettre non couverte) |
+| Table pour `0` | Recuperation (lettre couverte) | Codes faux acceptes (lettre non couverte) |
 |---|---|---|
-| `0 -> O` (avant) | 54 % | 4,4 % |
-| **`0 -> O, U` (retenue)** | **99 %** | **6,6 %** |
-| `0 -> O, U, D, Q` | 98 % | 8,6 % |
+| `O` seul (etat initial) | 54 % | 4,4 % |
+| `O, U` | 99,1 % | 6,6 % |
+| **`O, U, I` (retenue)** | **98,9 %** | **6,7 %** |
+| `O, U, D, Q` — **ecartee** | 98 % | **8,6 %** |
 
-Cas concret : `TEMU3108252` lu `TE203108252` (le `M` lu `2` n'est pas couvert) produit `TEZD3108252` avec `D` — valide au controle mais **faux**. Avec `O` et `U` seuls, ce cas retombe en saisie manuelle, c'est-a-dire du bon cote de l'erreur.
+`I` a ete retenu : il recupere un cas reel (`LFIU2043087`) pour un cout de **0,1 point** de faux acceptes.
+
+`D` et `Q` ont ete **ecartes** : ils coutent **2 points** et cassent un cas concret. `TEMU3108252` lu `TE203108252` (le `M` lu `2` n'est pas couvert, le vrai code est donc hors d'atteinte) produit alors `TEZD3108252`, valide au controle mais **faux**. Sans `D` ni `Q`, ce cas retombe en saisie manuelle, c'est-a-dire du bon cote de l'erreur. Un test le verrouille.
+
+Une ambiguite ne peut jamais naitre d'une **seule** position : les lettres proposees pour un meme chiffre ont toutes des valeurs distinctes modulo 11, or c'est cette valeur qui determine le chiffre de controle. Elle ne peut apparaitre que par la combinaison de plusieurs positions, ou de deux lectures concurrentes — cas traites par le refus sur ambiguite.
 
 ## Limites connues
 
-- **Confusion non defendable (`I` lu `0`)** : le cas `LFIU2043087`, lu `LF002043087`, n'est **pas** corrige. Le `U` lu `0` est couvert, mais pas le `I` lu `0` : un `I` est une barre verticale, un `0` un ovale, la confusion n'est pas defendable morphologiquement. L'inscrire dans la table ferait accepter des codes faux ailleurs. Le comportement attendu est donc la **bascule en saisie manuelle**, jamais un code invente. Choix volontaire, couvert par un test.
 - **Echec de lecture severe (matricule tronque)** : lorsque l'OCR ne restitue que 10 caracteres ou moins, ou que les quatre lettres du code proprietaire sont entierement transformees en chiffres, **aucune table de substitution ne peut aider** : il n'existe meme pas de fenetre de 11 caracteres a corriger. C'est le **pipeline de lecture verticale lui-meme** qui est en cause, pas l'etage de correction. Documente comme limite, non traite : le systeme bascule en saisie manuelle.
 - Le mapping des libelles taille/type (longueur, hauteur, groupe de type) est **volontairement partiel et extensible** : un code structurellement valide mais dont le libelle detaille est inconnu est accepte avec un `warning` metier.
 - La validation taille/type couvre la **structure** (4 caracteres, 3e = lettre), pas encore la table officielle ISO 6346 complete.
