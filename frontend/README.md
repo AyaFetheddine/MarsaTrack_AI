@@ -1,4 +1,25 @@
-# MarsaTrack AI - Frontend
+# MarsaPort AI - Frontend
+
+Le frontend est le **portail unique MarsaPort AI**. Il reunit deux modules :
+
+- **MarsaTrack AI** : tableau de bord, operations, arrets de travail, conteneurs et personnel ;
+- **MarsaBot Factory** : bots, base de connaissances et parametres des assistants, **reserves a l'administrateur**.
+
+La console d'assistants garde son propre depot, son backend et son authentification. Le portail se contente de l'afficher : elle detecte l'encadrement et masque sa propre barre laterale, de sorte qu'une seule navigation reste visible. Les deux ports etant des origines distinctes, la console demande sa propre connexion la premiere fois.
+
+## Roles et navigation
+
+Cinq roles de connexion, chacun avec au moins une prerogative exclusive :
+
+| Role | Voit | Prerogative exclusive |
+|---|---|---|
+| Admin | tout, MarsaBot compris | supprimer |
+| Responsable_Exploitation | tableau de bord, operations, arrets, conteneurs, personnel | ouvrir et annuler une operation, gerer le personnel |
+| Chef_Services | idem | cloturer une operation |
+| Chef_Equipe | tableau de bord, operations, arrets, personnel | declarer et cloturer un arret |
+| Portiqueur | tableau de bord, operations, conteneurs | saisir un conteneur et lancer la Vision IA |
+
+Le tableau de bord affiche les **memes compteurs pour tous les roles** : ce sont des agregats, sans donnee nominative. Les listes detaillees, elles, restent filtrees par role.
 
 ## Capture camera des conteneurs
 
@@ -23,7 +44,15 @@ Avant la capture, verifier que :
 - les reflets et le flou sont limites ;
 - l'orientation horizontale ou verticale correspond au code visible.
 
-Le navigateur peut proposer plusieurs cameras. Le module privilegie la camera arriere lorsque le navigateur fournit cette information. Le flash et le zoom ne sont affiches que lorsqu'ils sont reels disponibles sur l'appareil.
+Le module demande la **camera arriere** lorsque l'appareil en expose une (`facingMode: environment`), et se rabat sur la camera par defaut sinon. Il n'offre en revanche **ni flash, ni zoom, ni selecteur de camera** : le cadrage se fait en approchant l'appareil.
+
+### Limite connue : matricule vertical par camera
+
+Un matricule **horizontal** est lu de facon fiable par la camera. Un matricule **vertical** photographie a la camera echoue en revanche souvent, la ou la meme image importee depuis un fichier est correctement lue.
+
+La cause n'est pas le chemin camera, mais la qualite de la prise de vue : reflets, moire et resolution utile reduite degradent une colonne de caracteres fins bien plus qu'une ligne horizontale. L'OCR ne restitue alors que 8 a 10 caracteres sur 11, et il n'existe plus de fenetre de 11 caracteres a corriger. Le systeme bascule en saisie manuelle, ce qui est le comportement voulu.
+
+En pratique : photographier une **impression papier** a plat plutot qu'un ecran, et remplir le cadre avec le marquage.
 
 ### Controle qualite local
 
