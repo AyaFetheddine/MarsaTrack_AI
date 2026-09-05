@@ -249,8 +249,49 @@ python -m pytest
 
 Les tests utilisent des doubles YOLO/OCR (classes V1 `container_code` et V2 `container-number` + `iso-type`) et ne dependent pas des poids locaux. Le test d'integration du vrai modele est ignore si le poids ou Ultralytics est absent. Aucune image sensible n'est versionnee.
 
+## Correction des caracteres et regle de securite
+
+Sur un marquage vertical, chaque glyphe est lu isolement et pivote : PaddleOCR rend alors tres souvent une **lettre du code proprietaire sous forme de chiffre**. Le cas reel `TCLU3361509` est lu `TCL03361509` — le `U` devient `0`.
+
+Le pipeline propose donc des lectures alternatives, **uniquement aux quatre positions du code proprietaire** (les sept positions numeriques ne sont pas elargies) :
+
+| Chiffre lu | Lettres proposees | Justification morphologique |
+|---|---|---|
+| `0` | `O`, `U` | ovale plein ; silhouette du `U` fermee en bas, son ouverture superieure se comble sur une paroi ondulee ou peinte |
+| `1` | `I`, `L` | barre verticale ; l'empattement bas du `L` se perd au seuillage |
+| `2` | `Z` | meme diagonale, meme base horizontale |
+| `4` | `A` | sommet ferme et barre transversale |
+| `5` | `S` | meme courbe superieure, l'angle du `5` s'arrondit |
+| `6` | `G` | boucle basse identique, la barre du `G` se comble |
+| `8` | `B` | deux boucles superposees |
+
+Les chiffres `3`, `7` et `9` n'ont pas d'equivalent alphabetique credible : les omettre fait echouer la fenetre, ce qui est le comportement voulu.
+
+### La regle inviolable
+
+Elle est appliquee dans **`select_best_iso_candidate`**, et c'est le point fort du dispositif :
+
+1. **Le chiffre de controle ISO 6346 est l'unique juge.** Un candidat corrige n'entre au classement que si `validate_container_code` le declare valide — format **et** chiffre de controle. Aucune correction n'est jamais retenue sur le seul respect du format.
+2. **Refus sur ambiguite.** Si plusieurs codes *differents* franchissent ce filtre, rien n'est retenu et l'operateur saisit le matricule a la main. Departager au score reviendrait a livrer un code peut-etre faux. Plusieurs lectures menant au **meme** code ne sont pas une ambiguite : elles se confortent.
+
+Le risque `is_valid_iso = true` alors que l'OCR s'est trompe est ainsi contenu, jamais elimine : le chiffre de controle ne discrimine qu'a **1/11**. C'est pourquoi la table reste volontairement etroite, et pourquoi la correction manuelle demeure la voie de repli normale.
+
+### Pourquoi la table n'est pas plus large
+
+`D` et `Q` ont ete envisages puis **ecartes** pour `0`. Chaque alternative supplementaire offre une chance de plus qu'un code faux satisfasse le controle par hasard. Mesure sur 12 000 codes degrades dont la vraie lettre n'est pas couverte par la table :
+
+| Table | Recuperation (lettre couverte) | Codes faux acceptes (lettre non couverte) |
+|---|---|---|
+| `0 -> O` (avant) | 54 % | 4,4 % |
+| **`0 -> O, U` (retenue)** | **99 %** | **6,6 %** |
+| `0 -> O, U, D, Q` | 98 % | 8,6 % |
+
+Cas concret : `TEMU3108252` lu `TE203108252` (le `M` lu `2` n'est pas couvert) produit `TEZD3108252` avec `D` — valide au controle mais **faux**. Avec `O` et `U` seuls, ce cas retombe en saisie manuelle, c'est-a-dire du bon cote de l'erreur.
+
 ## Limites connues
 
+- **Confusion non defendable (`I` lu `0`)** : le cas `LFIU2043087`, lu `LF002043087`, n'est **pas** corrige. Le `U` lu `0` est couvert, mais pas le `I` lu `0` : un `I` est une barre verticale, un `0` un ovale, la confusion n'est pas defendable morphologiquement. L'inscrire dans la table ferait accepter des codes faux ailleurs. Le comportement attendu est donc la **bascule en saisie manuelle**, jamais un code invente. Choix volontaire, couvert par un test.
+- **Echec de lecture severe (matricule tronque)** : lorsque l'OCR ne restitue que 10 caracteres ou moins, ou que les quatre lettres du code proprietaire sont entierement transformees en chiffres, **aucune table de substitution ne peut aider** : il n'existe meme pas de fenetre de 11 caracteres a corriger. C'est le **pipeline de lecture verticale lui-meme** qui est en cause, pas l'etage de correction. Documente comme limite, non traite : le systeme bascule en saisie manuelle.
 - Le mapping des libelles taille/type (longueur, hauteur, groupe de type) est **volontairement partiel et extensible** : un code structurellement valide mais dont le libelle detaille est inconnu est accepte avec un `warning` metier.
 - La validation taille/type couvre la **structure** (4 caracteres, 3e = lettre), pas encore la table officielle ISO 6346 complete.
 - La qualite OCR depend du cadrage, de l'eclairage et de la resolution.
@@ -258,4 +299,3 @@ Les tests utilisent des doubles YOLO/OCR (classes V1 `container_code` et V2 `con
 - **Lecture verticale** : la reconstruction et les rotations ameliorent nettement les colonnes verticales, mais un caractere physiquement illisible (masque par un filigrane, un reflet ou un flou fort) ne peut jamais etre recupere. Dans ce cas, la zone est signalee comme non fiable et la **correction manuelle** reste la voie normale.
 - **Surface bombee / perspective** : sur un conteneur a paroi arrondie ou photographie de biais, un matricule vertical n'est pas lisible en bloc (ligne de texte courbee, lettres isolees sans contexte). Le **secours segmentation + reflow** (voir plus haut) traite ce cas et recupere le matricule complet dans les images testees (ex: `TEMU3108252`). Limite residuelle : ce secours suppose une binarisation propre des caracteres ; sur une image tres floue, tres sombre ou a tres faible contraste, la segmentation peut echouer et la correction manuelle reste la voie de repli.
 - La lecture verticale ajoute des variantes OCR : sur une image ou aucun code valide n'est trouve, le temps de traitement d'une zone verticale est plus long que celui d'une zone horizontale (borne par `VISION_MAX_OCR_VARIANTS`, `VISION_MAX_CROP_SIDE_PX` et le timeout backend). Ordre de grandeur observe sur CPU : ~2 s pour une photo nette, jusqu'a ~30 s pour une grande image (1920x1080) dont le matricule vertical n'est pas lisible et declenche toutes les variantes.
-```
