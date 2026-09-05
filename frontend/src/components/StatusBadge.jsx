@@ -31,7 +31,6 @@ function StatusBadge({ value }) {
     annulee: 'Annulée',
     Responsable_Exploitation: 'Responsable Exploitation',
     Chef_Services: 'Chef Services',
-    Chef_Escale: 'Chef Escale',
     Chef_Equipe: 'Chef Équipe',
     Equipage: 'Équipage',
     Agent_Terrain: 'Agent Terrain',

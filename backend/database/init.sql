@@ -45,14 +45,13 @@ CREATE TABLE IF NOT EXISTS users (
   matricule     VARCHAR(50)   NOT NULL UNIQUE
                               COMMENT 'Identifiant badge unique employé Marsa Maroc',
   role          ENUM(
-                  'Admin',
-                  'Responsable_Exploitation', -- Planificateur, définit les besoins et affecte les portiques
+                  'Admin',                    -- Administrateur : seul habilité aux suppressions
+                  'Responsable_Exploitation', -- Planificateur : ouvre et annule l'opération, affecte le personnel
                   'Chef_Services',            -- Validateur final, clôture et verrouille l'opération
-                  'Chef_Escale',              -- Superviseur global de plusieurs opérations simultanées
-                  'Chef_Equipe',              -- Gestionnaire terrain, crée et saisit les données d'opération
-                  'Portiqueur',               -- Opérateur grue (1 par opération, rotation toutes les 4h)
-                  'Equipage'                  -- Personnel élargi : conducteurs, pointeurs
-                )             NOT NULL,
+                  'Chef_Equipe',              -- Gestionnaire terrain : déclare et clôture les arrêts de travail
+                  'Portiqueur'                -- Opérateur grue : saisit les conteneurs via la Vision IA
+                )             NOT NULL
+                              COMMENT 'Rôle de connexion. Le personnel de terrain affectable (équipage, conducteurs, pointeurs) vit dans la table personnel, sans compte.',
   password_hash VARCHAR(255)  NOT NULL
                               COMMENT 'Hash bcrypt — mot de passe jamais stocké en clair',
   created_at    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,

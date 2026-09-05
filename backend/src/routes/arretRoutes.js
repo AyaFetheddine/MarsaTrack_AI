@@ -22,7 +22,6 @@ router.get(
     'Admin',
     'Responsable_Exploitation',
     'Chef_Services',
-    'Chef_Escale',
     'Chef_Equipe'
   ),
   getArrets

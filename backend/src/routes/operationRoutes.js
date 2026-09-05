@@ -19,7 +19,7 @@ const router = express.Router();
 router.post(
   '/',
   authenticateToken,
-  authorizeRoles('Admin', 'Responsable_Exploitation', 'Chef_Equipe'),
+  authorizeRoles('Admin', 'Responsable_Exploitation'),
   createOperation
 );
 
@@ -35,7 +35,6 @@ router.get(
     'Admin',
     'Responsable_Exploitation',
     'Chef_Services',
-    'Chef_Escale',
     'Chef_Equipe',
     'Portiqueur'
   ),
