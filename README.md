@@ -1,23 +1,37 @@
-# MarsaPort AI
+# MarsaTrack AI
 
-Portail unique de gestion et d'assistance portuaire pour **Marsa Maroc**,
-terminal à conteneurs de Casablanca.
+Module de **gestion opérationnelle** du terminal à conteneurs de Casablanca,
+pour **Marsa Maroc** : opérations, arrêts de travail, conteneurs, personnel, et
+reconnaissance visuelle des matricules ISO 6346.
 
-Une seule application pour l'utilisateur, une seule authentification, deux
-modules :
-
-| Module | Rôle | Où vit le code |
-|---|---|---|
-| **MarsaTrack AI** | gestion opérationnelle du terminal : opérations, arrêts de travail, conteneurs, personnel, reconnaissance visuelle des matricules | **ce dépôt** |
-| **MarsaBot Factory** | assistants WhatsApp, base de connaissances, configuration du moteur de génération | dépôt [`MarsaBot_Factory`](https://github.com/AyaFetheddine/MarsaBot_Factory) |
-
-Ce dépôt porte donc **le portail MarsaPort AI et le module MarsaTrack AI**. La
-console des assistants est affichée dans le portail mais reste développée et
-déployée séparément.
+Ce dépôt héberge en plus la **coquille du portail MarsaPort AI** — navigation,
+écran de connexion et mise en page — qui réunit les deux modules du produit
+sous une seule interface.
 
 ---
 
-## Ce que fait l'application
+## Place dans MarsaPort AI
+
+MarsaPort AI est le **produit**. Il n'a pas de dépôt à lui : il se compose de
+deux modules, développés et déployés dans **deux dépôts distincts**.
+
+| Module | Rôle | Dépôt |
+|---|---|---|
+| **MarsaTrack AI** | gestion opérationnelle, reconnaissance visuelle, **et la coquille du portail** | **ce dépôt** |
+| **MarsaBot Factory** | assistants WhatsApp, base de connaissances, moteur de génération | [`MarsaBot_Factory`](https://github.com/AyaFetheddine/MarsaBot_Factory) |
+
+**Aucune fusion de code n'a eu lieu.** Chaque module garde son dépôt, son
+backend et sa base de données. Ce que l'utilisateur perçoit comme une seule
+application vient de trois liaisons, décrites plus bas : un cadre qui affiche la
+console dans le portail, une session partagée entre les deux interfaces, et un
+appel HTTP en lecture seule entre les deux serveurs.
+
+Ce README décrit donc **ce dépôt**, et les liaisons qu'il porte. Le
+fonctionnement interne des assistants est documenté dans l'autre dépôt.
+
+---
+
+## Ce que fait ce dépôt
 
 **Suivre une opération de bout en bout.** Le responsable d'exploitation ouvre
 une opération pour un navire à quai — escale, poste, shift, vacation — et y
@@ -32,14 +46,20 @@ un code dont le chiffre de contrôle est faux n'est jamais annoncé comme valide
 En cas d'échec, le système bascule en saisie manuelle plutôt que de proposer une
 valeur douteuse.
 
-**Répondre aux questions du terrain sur WhatsApp.** Les assistants MarsaBot
-interrogent le terminal en temps réel — opérations en cours, personnels
-affectés, arrêts ouverts — sans qu'aucune adresse d'API n'ait à être saisie à la
-création d'un bot.
+**Réunir les deux modules sous une seule interface.** Le portail porte la
+navigation, l'authentification unique et l'affichage de la console des
+assistants.
+
+> Les assistants WhatsApp eux-mêmes — création des bots, base de connaissances,
+> moteur de génération — relèvent du dépôt `MarsaBot_Factory`. Ce dépôt ne
+> fournit que les **données** qu'ils lisent, par la passerelle décrite plus bas.
 
 ---
 
-## Architecture
+## Architecture du produit
+
+Le schéma couvre **les deux dépôts** : la colonne de gauche est ce dépôt, celle
+de droite l'autre.
 
 ```text
                     Navigateur — portail MarsaPort AI
@@ -229,15 +249,18 @@ qu'une ligne. L'OCR ne restitue alors que 8 à 10 caractères sur 11, et il
 n'existe plus de fenêtre de 11 caractères à corriger. Le système bascule en
 saisie manuelle, ce qui est le comportement voulu.
 
-**Qualité des réponses selon le modèle.** `llama3.2` (3 milliards de
-paramètres) reste un petit modèle : il confond parfois des identifiants proches.
-Le modèle se change depuis la page Paramètres sans redémarrage.
+Les limites propres aux assistants — qualité des réponses selon le modèle de
+génération, notamment — relèvent du dépôt `MarsaBot_Factory` et y sont
+documentées.
 
 ---
 
 ## Souveraineté des données
 
-Aucune donnée opérationnelle ne quitte l'infrastructure : la reconnaissance
-visuelle et la génération de texte s'exécutent localement, respectivement par
-le service de vision et par Ollama. Le seul appel sortant possible est la
-recherche web des assistants, désactivée en l'absence de clé.
+Aucune donnée opérationnelle ne quitte l'infrastructure. Dans ce dépôt, la
+reconnaissance visuelle s'exécute **localement** : les images de conteneurs sont
+traitées par le service de vision, sans aucun appel sortant, et aucune image
+n'est versionnée.
+
+Le module des assistants tient la même ligne — génération de texte locale par
+Ollama — et documente ses propres appels sortants.
