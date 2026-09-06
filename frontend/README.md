@@ -5,7 +5,7 @@ Le frontend est le **portail unique MarsaPort AI**. Il reunit deux modules :
 - **MarsaTrack AI** : tableau de bord, operations, arrets de travail, conteneurs et personnel ;
 - **MarsaBot Factory** : bots, base de connaissances et parametres des assistants, **reserves a l'administrateur**.
 
-La console d'assistants garde son propre depot, son backend et son authentification. Le portail se contente de l'afficher : elle detecte l'encadrement et masque sa propre barre laterale, de sorte qu'une seule navigation reste visible. Les deux ports etant des origines distinctes, la console demande sa propre connexion la premiere fois.
+La console d'assistants garde son propre depot et son backend, mais plus son authentification. Le portail se contente de l'afficher : elle detecte l'encadrement et masque sa propre barre laterale, de sorte qu'une seule navigation reste visible. Les deux ports etant des origines distinctes, leurs `localStorage` sont cloisonnes : le portail transmet donc son jeton par `postMessage`, restreint a l'origine de la console, qui le reclame des qu'elle est prete. Les deux services signant avec le meme `JWT_SECRET`, l'utilisateur ne s'authentifie qu'une fois. Quand ce jeton n'est plus valable, la console le signale au portail, qui deconnecte **tout MarsaPort AI** et presente son propre ecran d'authentification, plutot qu'un second formulaire dans le cadre.
 
 ## Roles et navigation
 

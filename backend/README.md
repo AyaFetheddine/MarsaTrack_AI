@@ -6,6 +6,8 @@ terminal et le relais vers le microservice Vision.
 Node 22, Express 5, MySQL 8. Demarrage : `npm start` (ou `npm run dev`).
 Le serveur refuse de demarrer sans `JWT_SECRET` et sans connexion MySQL.
 
+`JWT_SECRET` est **partage avec MarsaBot Factory** : le portail transmet son jeton a la console encadree, qui doit pouvoir le verifier. Les deux services doivent porter la meme valeur, sans quoi les utilisateurs sont deconnectes en silence. Cote MarsaBot, le middleware exige en plus le role `Admin` : la signature seule n'ouvre pas la gestion des assistants a un Portiqueur.
+
 ---
 
 ## Roles de connexion
