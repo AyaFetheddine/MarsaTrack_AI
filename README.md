@@ -90,6 +90,12 @@ Le personnel de terrain affectable — équipage, conducteurs, pointeurs — vit
 la table `personnel` et **n'a pas de compte** : il est désigné dans une
 opération, il ne se connecte pas.
 
+**Cinq comptes de connexion au total**, identifiés par leur matricule. La
+console des assistants garde un écran de connexion propre, comme accès de
+secours si le portail est indisponible, mais il attend le **même matricule et
+le même mot de passe** : une seconde porte vers le même compte, pas un second
+compte.
+
 Le tableau de bord affiche les **mêmes compteurs pour tous les rôles** : ce sont
 des agrégats, sans donnée nominative. Les listes détaillées, elles, restent
 filtrées par rôle.
